@@ -19,12 +19,11 @@ import random
 from util import *
 
 class Host(object):
-    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(), number_of_spots0=0, has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=False, late_night_tendencies0="survivors' club", misc_info0='', id_num0=-1):
+    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(), has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=False, late_night_tendencies0="survivors' club", misc_info0='', id_num0=-1):
         self.name=name0
         self.email=email0
         self.phone_number=phone_number0 # is a string
         self.days_housing_is_available=days_housing_is_available0 # is a frozenset
-        self.number_of_spots=number_of_spots0
         self.has_cats=has_cats0
         self.has_dogs=has_dogs0
         self.willing_to_house_smokers=willing_to_house_smokers0
@@ -42,7 +41,6 @@ Host:
     Email: '''+self.email+'''
     Phone Number: '''+self.phone_number+'''
     Days Housing Is Available: '''+(('Friday,' if 'Friday' in self.days_housing_is_available else '')+('Saturday,' if 'Saturday' in self.days_housing_is_available else '')+('Sunday,' if 'Sunday' in self.days_housing_is_available else ''))[:-1]+'''
-    Number of Available Spots: '''+str(self.number_of_spots)+'''
     Has Cats: '''+('Yes' if self.has_cats else 'No')+'''
     Has Dogs: '''+('Yes' if self.has_dogs else 'No')+'''
     Willing to House Smokers: '''+('Yes' if self.willing_to_house_smokers else 'No')+''' 
@@ -113,7 +111,8 @@ def are_compatible(host, guest):
 
 class Genome(object):
     def __init__(self, graph0):
-        self.graph=graph0
+        self.graph=graph0 # graph is assumed to be bipartite
+        self.chosen_edges = 
     
     def __str__(self):
         ans = 'String method for genome not yet defined.'
@@ -126,93 +125,42 @@ def generate_fixed_dummy_hosts_and_guests():
     hosts=[]
     guests=[]
     
-#    hosts.append(
-#        Host(
-#                name0='Dummy Host '+str(1), 
-#                email0='dummy_host_email'+str(1)+'@dummy.domain.com', 
-#                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-#                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-#                number_of_spots0=1,
-#                has_cats0=False, 
-#                has_dogs0=False, 
-#                willing_to_house_smokers0=True, 
-#                willing_to_provide_rides0=True, 
-#                late_night_tendencies0="survivors' club", 
-#                misc_info0='Dummy Misc. Info. for Dummy Host '+str(1),
-#                id_num0=generate_unique_identifier()
-#            )
-#        )
-#    
-#    hosts.append(
-#        Host(
-#                name0='Dummy Host '+str(2), 
-#                email0='dummy_host_email'+str(2)+'@dummy.domain.com', 
-#                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-#                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-#                number_of_spots0=1,
-#                has_cats0=False, 
-#                has_dogs0=False, 
-#                willing_to_house_smokers0=True, 
-#                willing_to_provide_rides0=True, 
-#                late_night_tendencies0="survivors' club", 
-#                misc_info0='Dummy Misc. Info. for Dummy Host '+str(2),
-#                id_num0=generate_unique_identifier()
-#            )
-#        )
-#    
-#    guests.append(
-#        Guest(
-#                name0='Dummy Guest '+str(3), 
-#                email0='dummy_guest_email'+str(3)+'@dummy.domain.com', 
-#                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-#                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
-#                can_be_around_cats0=True, 
-#                can_be_around_dogs0=True, 
-#                smokes0=False, 
-#                has_ride0=True, 
-#                late_night_tendencies0="survivors' club", 
-#                misc_info0='Dummy Mist. Info. for Dummy Host '+str(3),
-#                id_num0=generate_unique_identifier()
-#            )
-#        )
-#    
-#    guests.append(
-#        Guest(
-#                name0='Dummy Guest '+str(4), 
-#                email0='dummy_guest_email'+str(4)+'@dummy.domain.com', 
-#                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-#                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
-#                can_be_around_cats0=True, 
-#                can_be_around_dogs0=True, 
-#                smokes0=False, 
-#                has_ride0=True, 
-#                late_night_tendencies0="survivors' club", 
-#                misc_info0='Dummy Mist. Info. for Dummy Host '+str(4),
-#                id_num0=generate_unique_identifier()
-#            )
-#        )
-    
     hosts.append(
         Host(
-                name0='Dummy Host '+str(5), 
-                email0='dummy_host_email'+str(5)+'@dummy.domain.com', 
+                name0='Dummy Host '+str(1), 
+                email0='dummy_host_email'+str(1)+'@dummy.domain.com', 
                 phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
                 days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-                number_of_spots0=1,
                 has_cats0=False, 
                 has_dogs0=False, 
                 willing_to_house_smokers0=True, 
                 willing_to_provide_rides0=True, 
                 late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Misc. Info. for Dummy Host '+str(5),
+                misc_info0='Dummy Misc. Info. for Dummy Host '+str(1),
+                id_num0=generate_unique_identifier()
+            )
+        )
+    
+    hosts.append(
+        Host(
+                name0='Dummy Host '+str(2), 
+                email0='dummy_host_email'+str(2)+'@dummy.domain.com', 
+                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
+                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
+                has_cats0=False, 
+                has_dogs0=False, 
+                willing_to_house_smokers0=True, 
+                willing_to_provide_rides0=True, 
+                late_night_tendencies0="survivors' club", 
+                misc_info0='Dummy Misc. Info. for Dummy Host '+str(2),
                 id_num0=generate_unique_identifier()
             )
         )
     
     guests.append(
         Guest(
-                name0='Dummy Guest '+str(6), 
-                email0='dummy_guest_email'+str(6)+'@dummy.domain.com', 
+                name0='Dummy Guest '+str(3), 
+                email0='dummy_guest_email'+str(3)+'@dummy.domain.com', 
                 phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
                 days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
                 can_be_around_cats0=True, 
@@ -220,7 +168,23 @@ def generate_fixed_dummy_hosts_and_guests():
                 smokes0=False, 
                 has_ride0=True, 
                 late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Mist. Info. for Dummy Host '+str(7),
+                misc_info0='Dummy Mist. Info. for Dummy Host '+str(3),
+                id_num0=generate_unique_identifier()
+            )
+        )
+    
+    guests.append(
+        Guest(
+                name0='Dummy Guest '+str(4), 
+                email0='dummy_guest_email'+str(4)+'@dummy.domain.com', 
+                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
+                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
+                can_be_around_cats0=True, 
+                can_be_around_dogs0=True, 
+                smokes0=False, 
+                has_ride0=True, 
+                late_night_tendencies0="survivors' club", 
+                misc_info0='Dummy Mist. Info. for Dummy Host '+str(4),
                 id_num0=generate_unique_identifier()
             )
         )
@@ -233,7 +197,6 @@ def generate_random_dummy_hosts_and_guests(num_hosts=10, num_guests=10):
                 email0='dummy_host_email'+str(i)+'@dummy.domain.com', 
                 phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
                 days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-                number_of_spots0=1,
                 has_cats0=False, 
                 has_dogs0=False, 
                 willing_to_house_smokers0=True, 
@@ -296,8 +259,11 @@ def main():
             if are_compatible(host, guest):
                 G.add_edge(host.id_num, guest.id_num)
     
-    print G.nodes()
-    print G.edges()
+    max_G = networkx.maximal_matching(G)
+    print "Nodes:",G.nodes()
+    print "Edges:",G.edges()
+    print "Maximal Matching:",max_G
+    print 
     
     genomes = [Genome(G) for i in xrange(population_size)]
     
