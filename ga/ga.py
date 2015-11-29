@@ -4,10 +4,14 @@
 TODO:
     Very Important
         get Genome class running
+            get mate() func working
         Add parsing of real data to add real hosts and guests instead of using the dummy func
+            implement feature to have lists of preferred guests and hosts via a list of id_num values
+            then get the P value determination method added to the genome class
     
     Less Important
         add __repr__ method for Host, Guest, and Genome
+        add __str__ for Genome
 '''
 
 import os
@@ -16,7 +20,10 @@ import pdb
 import networkx
 import time
 import random
+import copy
 from util import *
+
+housing_graph = None
 
 class Host(object):
     def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(), has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=False, late_night_tendencies0="survivors' club", misc_info0='', id_num0=-1):
@@ -109,18 +116,6 @@ def are_compatible(host, guest):
     
     return True
 
-class Genome(object):
-    def __init__(self, graph0):
-        self.graph=graph0 # graph is assumed to be bipartite
-        self.chosen_edges = 
-    
-    def __str__(self):
-        ans = 'String method for genome not yet defined.'
-        return ans.strip('\n')
-    
-    def mutate(self):
-        assertion(False, "Mutate method not yet defined.")
-
 def generate_fixed_dummy_hosts_and_guests():
     hosts=[]
     guests=[]
@@ -189,6 +184,38 @@ def generate_fixed_dummy_hosts_and_guests():
             )
         )
     
+    hosts.append(
+        Host(
+                name0='Dummy Host '+str(5), 
+                email0='dummy_host_email'+str(5)+'@dummy.domain.com', 
+                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
+                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
+                has_cats0=False, 
+                has_dogs0=False, 
+                willing_to_house_smokers0=True, 
+                willing_to_provide_rides0=True, 
+                late_night_tendencies0="survivors' club", 
+                misc_info0='Dummy Misc. Info. for Dummy Host '+str(5),
+                id_num0=generate_unique_identifier()
+            )
+        )
+    
+    guests.append(
+        Guest(
+                name0='Dummy Guest '+str(6), 
+                email0='dummy_guest_email'+str(6)+'@dummy.domain.com', 
+                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
+                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
+                can_be_around_cats0=True, 
+                can_be_around_dogs0=True, 
+                smokes0=False, 
+                has_ride0=True, 
+                late_night_tendencies0="survivors' club", 
+                misc_info0='Dummy Mist. Info. for Dummy Host '+str(6),
+                id_num0=generate_unique_identifier()
+            )
+        )
+    
     return hosts, guests
 
 def generate_random_dummy_hosts_and_guests(num_hosts=10, num_guests=10):
@@ -222,6 +249,56 @@ def generate_random_dummy_hosts_and_guests(num_hosts=10, num_guests=10):
             for i in xrange(num_guests)]
     return hosts, guests
 
+class Genome(object):
+    
+    global housing_graph
+    
+    def fill_edges(self):
+        edges = housing_graph.edges()
+        random.shuffle(edges)
+        for edge in edges: 
+            if edge[0] not in [e[0] for e in self.chosen_edges] and edge[1] not in [e[1] for e in self.chosen_edges]:
+                self.chosen_edges.append(edge)
+        
+    def __init__(self):
+        self.chosen_edges = []
+        self.fill_edges()
+    
+    def __str__(self):
+        ans = 'String method for genome not yet defined.'
+        return ans
+    
+    def mutate(self):
+        random.shuffle(self.chosen_edges)
+        self.chosen_edges = self.chosen_edges[:len(self.chosen_edges)/2]
+        self.fill_edges()
+    
+    def get_num_housed_guests(self):
+        return len(self.chosen_edges)
+
+def mate(parent_1, parent_2):
+    child = Genome()
+    edges_1 = parent_1.chosen_edges
+    edges_2 = parent_2.chosen_edges
+    random.shuffle(edges_1)
+    random.shuffle(edges_2)
+    child.chosen_edges=[]
+    starting_index_1=0
+    starting_index_2=0
+    while starting_index_1<len(edges_1)-1 or starting_index_2<len(edges_2)-1:
+        for i, edge in enumerate(edges_1[starting_index_1:]):
+            if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
+                child.chosen_edges.append(edge)
+                break
+        starting_index_1+=1+i
+        for i, edge in enumerate(edges_2[starting_index_2:]):
+            if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
+                child.chosen_edges.append(edge)
+                break
+        starting_index_2+=1+i
+    child.fill_edges()
+    return child
+
 def usage(): 
     # Example Usage: python ga.py -population_size 10 -generations 10
     print >> sys.stderr, 'python '+__file__
@@ -244,29 +321,45 @@ def main():
     
     # Add hosts and guests
 #    hosts, guests = generate_random_dummy_hosts_and_guests()
-    hosts, guests = generate_fixed_dummy_hosts_and_guests()
+#    hosts, guests = generate_fixed_dummy_hosts_and_guests()
+    hosts, guests = generate_random_dummy_hosts_and_guests(3,3)
     
     # Create Graph
-    G = networkx.Graph()
+    global housing_graph
+    housing_graph = networkx.Graph()
     
     for host in hosts:
-        G.add_node(host.id_num)
+        housing_graph.add_node(host.id_num)
     for guest in guests:
-        G.add_node(guest.id_num)
+        housing_graph.add_node(guest.id_num)
     
     for host in hosts:
         for guest in guests:
             if are_compatible(host, guest):
-                G.add_edge(host.id_num, guest.id_num)
+                housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
     
-    max_G = networkx.maximal_matching(G)
-    print "Nodes:",G.nodes()
-    print "Edges:",G.edges()
-    print "Maximal Matching:",max_G
+    maximal_matching = networkx.maximal_matching(housing_graph)
+    print "Nodes:", housing_graph.nodes()
+    print "Edges:", housing_graph.edges()
+    print "Maximal Matching:", maximal_matching
     print 
     
-    genomes = [Genome(G) for i in xrange(population_size)]
+    genomes = [Genome() for i in xrange(population_size)]
+    for i,g in enumerate(genomes):
+        print i, sorted(g.chosen_edges, key=lambda x: x[0])
+    print '\n'
+    for g in genomes:
+        g.mutate()
+    for i,g in enumerate(genomes):
+        print i, sorted(g.chosen_edges, key=lambda x: x[0])
+    print '\n'
     
+    child = mate(genomes[0],genomes[1])
+    print 'Parent 1:', sorted(genomes[0].chosen_edges, key=lambda x: x[0])
+    print 'Parent 2:', sorted(genomes[1].chosen_edges, key=lambda x: x[0])
+    print 'Child:', sorted(child.chosen_edges, key=lambda x: x[0])
+    
+    print 
     print 'Total Run Time: '+str(time.time()-start_time)
     print 
 
