@@ -4,9 +4,6 @@
 TODO:
     Very Important
         Add parsing of real data to add real hosts and guests instead of using the dummy func
-            parse the real data so that we have a list of edges (host,guest) of people hat prefer each other so that we can easily see which guests and hosts prefer each other. this willmake determing p values easier. determining guests who prefer guests will still take a while
-            get the P value determination method added to the genome class
-        Implement finding P values for guests that prefer each other
         Save the __repr__() values of the genomes for each generation in text files
         create a pareto curve image for each generation that includes points for each previously generated genome
     
@@ -158,16 +155,32 @@ def are_compatible(host, guest):
     
     return True
 
+def same_person(h1,h2):
+    # Each Host object actually represents a spot in a particular person's house, not that person. 
+    # This function tells us if two Host objects represent the same person.
+    return \
+            h1.name==h2.name and \
+            h1.email==h2.email and \
+            h1.phone_number==h2.phone_number and \
+            h1.days_housing_is_available==h2.days_housing_is_available and \
+            h1.has_cats==h2.has_cats and \
+            h1.has_dogs==h2.has_dogs and \
+            h1.willing_to_house_smokers==h2.willing_to_house_smokers and \
+            h1.willing_to_provide_rides==h2.willing_to_provide_rides and \
+            h1.late_night_tendencies==h2.late_night_tendencies and \
+            h1.preferred_house_guests==h2.preferred_house_guests and \
+            h1.misc_info==h2.misc_info 
+
 def generate_fixed_dummy_hosts_and_guests():
     hosts=[
-        Host(name0='Host 1', id_num0=1),
-        Host(name0='Host 2', preferred_house_guests0=[4,5], id_num0=2),
-        Host(name0='Host 3', id_num0=3),
+        Host(name0='Host 1', preferred_house_guests0=[4], id_num0=1),
+        Host(name0='Host 2', preferred_house_guests0=[5,6], id_num0=2),
+        Host(name0='Host 2', preferred_house_guests0=[5,6], id_num0=3),
     ]
     guests=[
-        Guest(name0='Guest 4', preferred_house_guests0=[2,5], id_num0=4),
-        Guest(name0='Guest 5', preferred_house_guests0=[2,4], id_num0=5),
-        Guest(name0='Guest 6', id_num0=6),
+        Guest(name0='Guest 4', preferred_house_guests0=[1], id_num0=4),
+        Guest(name0='Guest 5', preferred_house_guests0=[2,3,6], id_num0=5),
+        Guest(name0='Guest 6', preferred_house_guests0=[2,5], id_num0=6),
     ]
     return hosts, guests
 
@@ -200,9 +213,19 @@ class Genome(object):
     def get_P_value(self):
         P = 0
         for host in hosts:
-            P += len(list_intersection([(host.id_num,preferred_house_guest_id) for preferred_house_guest_id in host.preferred_house_guests],chosen_edges))
-        # Can't implement finding P values of guests that prefer each other bc each Host object actually prepresents a spot in a host's house, not necessarily just one host. 
-        
+            P += len(list_intersection([(host.id_num,preferred_house_guest_id) for preferred_house_guest_id in host.preferred_house_guests], self.chosen_edges))
+        for guest in guests:
+            host_of_guest_id_num_list = [h for (h,g) in self.chosen_edges if g==guest.id_num]
+            assertion(len(host_of_guest_id_num_list)<2, "Guest (id_num: "+str(guest.id_num)+") is assigned to more than one spot.")
+            if len(host_of_guest_id_num_list) != 0:
+                host_of_guest_id_num = host_of_guest_id_num_list[0]
+                host_of_guest = [host for host in hosts if host.id_num==host_of_guest_id_num][0]
+                other_host_objects_for_same_host_person = filter(lambda x: same_person(x,host_of_guest), hosts)
+                other_host_object_id_nums_for_same_host_person = [host.id_num for host in other_host_objects_for_same_host_person]
+                if len(list_intersection(other_host_object_id_nums_for_same_host_person,guest.preferred_house_guests)) > 0:
+                    P += 1 # We only add one bc we don't want to double count two host objects that represent the same person
+                list_of_co_guests = [g for (h,g) in self.chosen_edges if g != guest.id_num and h in other_host_object_id_nums_for_same_host_person]
+                P += len(list_intersection(list_of_co_guests,guest.preferred_house_guests))
         return P
 
 def mate(parent_1, parent_2):
@@ -294,6 +317,20 @@ def main():
     
     print 
     print hosts.__repr__()
+    print 
+    
+#    for i,g in enumerate(genomes):
+#        print i, g, g.get_P_value()
+    
+    print 
+    print same_person(hosts[0],hosts[1])
+    print same_person(hosts[1],hosts[1])
+    print same_person(hosts[1],hosts[2])
+    print same_person(hosts[0],hosts[2])
+    print
+    
+    t = Genome([(1,4),(2,5),(3,6)])
+    print t, t.get_P_value()
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
