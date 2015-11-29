@@ -4,11 +4,15 @@
 TODO:
     Very Important
         Add parsing of real data to add real hosts and guests instead of using the dummy func
-            implement feature to have lists of preferred guests and hosts via a list of id_num values
-            then get the P value determination method added to the genome class
+            parse the real data so that we have a list of edges (host,guest) of people hat prefer each other so that we can easily see which guests and hosts prefer each other. this willmake determing p values easier. determining guests who prefer guests will still take a while
+            get the P value determination method added to the genome class
+        Save the __repr__() values of the genomes for each generation in text files
+        create a pareto curve image for each generation that includes points for each previously generated genome
     
     Less Important
-        
+        Get late night tendencies to be taken into account for the P value determination
+        add preferred_house_guests to the __str__() method of Guest and Host
+            make it look up in the hosts and guests global list variables for the names of the actual preferred house guests 
 '''
 
 import os
@@ -21,9 +25,11 @@ import copy
 from util import *
 
 housing_graph = None
+hosts = [] 
+guests = []
 
 class Host(object):
-    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(), has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=False, late_night_tendencies0="survivors' club", misc_info0='', id_num0=-1):
+    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(), has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=False, late_night_tendencies0="survivors' club", preferred_house_guests0=[], misc_info0='', id_num0=-1):
         self.name=name0
         self.email=email0
         self.phone_number=phone_number0 # is a string
@@ -33,6 +39,7 @@ class Host(object):
         self.willing_to_house_smokers=willing_to_house_smokers0
         self.willing_to_provide_rides=willing_to_provide_rides0
         self.late_night_tendencies=late_night_tendencies0 # is a string
+        self.preferred_house_guests=preferred_house_guests0
         self.misc_info=misc_info0 # is a string
         self.id_num=id_num0 
         assertion(len(self.days_housing_is_available)>0, 'Hosts must have at least one day of housing available.')
@@ -66,13 +73,14 @@ Host:
                 '''willing_to_house_smokers0='''+self.willing_to_house_smokers.__repr__()+''', '''+ \
                 '''willing_to_provide_rides0='''+self.willing_to_provide_rides.__repr__()+''', '''+ \
                 '''late_night_tendencies0='''+self.late_night_tendencies.__repr__()+''', '''+ \
+                '''preferred_house_guests0='''+self.preferred_house_guests.__repr__()+''', '''+ \
                 '''misc_info0='''+self.misc_info.__repr__()+''', '''+ \
                 '''id_num0='''+self.id_num.__repr__()+ \
             ''')'''
         return ans
 
 class Guest(object):
-    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_needed0=frozenset(), can_be_around_cats0=False, can_be_around_dogs0=False, smokes0=True, has_ride0=False, late_night_tendencies0="survivors' club", misc_info0='', id_num0=-1):
+    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_needed0=frozenset(), can_be_around_cats0=False, can_be_around_dogs0=False, smokes0=True, has_ride0=False, late_night_tendencies0="survivors' club", preferred_house_guests0=[], misc_info0='', id_num0=-1):
         self.name=name0
         self.email=email0
         self.phone_number=phone_number0 # is a string
@@ -82,6 +90,7 @@ class Guest(object):
         self.smokes=smokes0
         self.has_ride=has_ride0
         self.late_night_tendencies=late_night_tendencies0 # is a string
+        self.preferred_house_guests=preferred_house_guests0
         self.misc_info=misc_info0 # is a string
         self.id_num=id_num0 
         assertion(len(self.days_housing_is_needed)>0, 'Guests must require at least one day of needed housing.')
@@ -115,6 +124,7 @@ Guest:
                 '''smokes0='''+self.smokes.__repr__()+''', '''+ \
                 '''has_ride0='''+self.has_ride.__repr__()+''', '''+ \
                 '''late_night_tendencies0='''+self.late_night_tendencies.__repr__()+''', '''+ \
+                '''preferred_house_guests0='''+self.preferred_house_guests.__repr__()+''', '''+ \
                 '''misc_info0='''+self.misc_info.__repr__()+''', '''+ \
                 '''id_num0='''+self.id_num.__repr__()+ \
             ''')'''
@@ -291,8 +301,8 @@ class Genome(object):
             if edge[0] not in [e[0] for e in self.chosen_edges] and edge[1] not in [e[1] for e in self.chosen_edges]:
                 self.chosen_edges.append(edge)
         
-    def __init__(self):
-        self.chosen_edges = []
+    def __init__(self, initial_edges=[]):
+        self.chosen_edges = initial_edges
         self.fill_edges()
     
     def __repr__(self):
@@ -348,6 +358,7 @@ def main():
     
     population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', 10)
     generations = get_command_line_param_val_default_value(sys.argv, '-generations', 10)
+    global housing_graph, hosts, guests
     
     # Add hosts and guests
 #    hosts, guests = generate_random_dummy_hosts_and_guests()
@@ -355,7 +366,6 @@ def main():
     hosts, guests = generate_random_dummy_hosts_and_guests(3,3)
     
     # Create Graph
-    global housing_graph
     housing_graph = networkx.Graph()
     
     for host in hosts:
@@ -394,6 +404,9 @@ def main():
     
     print hosts[0].__str__()
     print hosts[0].__repr__()
+    
+    print 
+    print hosts.__repr__()
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
