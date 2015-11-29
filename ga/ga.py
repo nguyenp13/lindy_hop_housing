@@ -8,9 +8,7 @@ TODO:
         create a pareto curve image for each generation that includes points for each previously generated genome
     
     Less Important
-        Get late night tendencies to be taken into account for the P value determination
-        add preferred_house_guests to the __str__() method of Guest and Host
-            make it look up in the hosts and guests global list variables for the names of the actual preferred house guests 
+        Get late night tendencies to be taken into account for the P value determinations 
 '''
 
 import os
@@ -55,6 +53,7 @@ Host:
     Willing to House Smokers: '''+('Yes' if self.willing_to_house_smokers else 'No')+''' 
     Willing to Provide Rides: '''+('Yes' if self.willing_to_provide_rides else 'No')+'''
     Late Night Tendencies: '''+self.late_night_tendencies+'''
+    Preferred House Guests: '''+', '.join(sorted(list(set([guest.name for guest in guests if guest.id_num in self.preferred_house_guests]))))+'''
     Misc. Info.: '''+self.misc_info+'''
 '''
         return ans
@@ -106,6 +105,8 @@ Guest:
     Smokes: '''+('Yes' if self.smokes else 'No')+''' 
     Needs Transportation: '''+('Yes' if not self.has_ride else 'No')+'''
     Late Night Tendencies: '''+self.late_night_tendencies+'''
+    Preferred Hosts: '''+', '.join(sorted(list(set([host.name for host in hosts if host.id_num in self.preferred_house_guests]))))+'''
+    Preferred Fellow House Guests: '''+', '.join(sorted(list(set([guest.name for guest in guests if guest.id_num != self.id_num and guest.id_num in self.preferred_house_guests]))))+'''
     Misc. Info.: '''+self.misc_info+'''
 '''
         return ans
@@ -331,6 +332,12 @@ def main():
     
     t = Genome([(1,4),(2,5),(3,6)])
     print t, t.get_P_value()
+    print 
+    
+    for h in hosts:
+        print h
+    for g in guests:
+        print g
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
