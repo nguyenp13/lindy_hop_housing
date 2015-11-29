@@ -10,6 +10,9 @@ import string
 
 UNIQUE_IDENTIFIER_COUNTER = 0
 
+def list_intersection(l1,l2):
+    return filter(set(l1).__contains__, l2)
+
 def generate_unique_identifier():
     global UNIQUE_IDENTIFIER_COUNTER 
     UNIQUE_IDENTIFIER_COUNTER += 1

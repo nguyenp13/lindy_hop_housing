@@ -6,6 +6,7 @@ TODO:
         Add parsing of real data to add real hosts and guests instead of using the dummy func
             parse the real data so that we have a list of edges (host,guest) of people hat prefer each other so that we can easily see which guests and hosts prefer each other. this willmake determing p values easier. determining guests who prefer guests will still take a while
             get the P value determination method added to the genome class
+        Implement finding P values for guests that prefer each other
         Save the __repr__() values of the genomes for each generation in text files
         create a pareto curve image for each generation that includes points for each previously generated genome
     
@@ -29,7 +30,7 @@ hosts = []
 guests = []
 
 class Host(object):
-    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(), has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=False, late_night_tendencies0="survivors' club", preferred_house_guests0=[], misc_info0='', id_num0=-1):
+    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_available0=frozenset(['Friday', 'Saturday', 'Sunday']), has_cats0=False, has_dogs0=False, willing_to_house_smokers0=True, willing_to_provide_rides0=True, late_night_tendencies0="survivors' club", preferred_house_guests0=[], misc_info0='', id_num0=-1):
         self.name=name0
         self.email=email0
         self.phone_number=phone_number0 # is a string
@@ -51,7 +52,7 @@ Host:
     Name: '''+self.name+'''
     Email: '''+self.email+'''
     Phone Number: '''+self.phone_number+'''
-    Days Housing Is Available: '''+(('Friday,' if 'Friday' in self.days_housing_is_available else '')+('Saturday,' if 'Saturday' in self.days_housing_is_available else '')+('Sunday,' if 'Sunday' in self.days_housing_is_available else ''))[:-1]+'''
+    Days Housing Is Available: '''+(('Friday, ' if 'Friday' in self.days_housing_is_available else '')+('Saturday, ' if 'Saturday' in self.days_housing_is_available else '')+('Sunday, ' if 'Sunday' in self.days_housing_is_available else ''))[:-2]+'''
     Has Cats: '''+('Yes' if self.has_cats else 'No')+'''
     Has Dogs: '''+('Yes' if self.has_dogs else 'No')+'''
     Willing to House Smokers: '''+('Yes' if self.willing_to_house_smokers else 'No')+''' 
@@ -80,7 +81,7 @@ Host:
         return ans
 
 class Guest(object):
-    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_needed0=frozenset(), can_be_around_cats0=False, can_be_around_dogs0=False, smokes0=True, has_ride0=False, late_night_tendencies0="survivors' club", preferred_house_guests0=[], misc_info0='', id_num0=-1):
+    def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_needed0=frozenset(['Friday', 'Saturday', 'Sunday']), can_be_around_cats0=True, can_be_around_dogs0=True, smokes0=False, has_ride0=True, late_night_tendencies0="survivors' club", preferred_house_guests0=[], misc_info0='', id_num0=-1):
         self.name=name0
         self.email=email0
         self.phone_number=phone_number0 # is a string
@@ -158,141 +159,21 @@ def are_compatible(host, guest):
     return True
 
 def generate_fixed_dummy_hosts_and_guests():
-    hosts=[]
-    guests=[]
-    
-    hosts.append(
-        Host(
-                name0='Dummy Host '+str(1), 
-                email0='dummy_host_email'+str(1)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-                has_cats0=False, 
-                has_dogs0=False, 
-                willing_to_house_smokers0=True, 
-                willing_to_provide_rides0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Misc. Info. for Dummy Host '+str(1),
-                id_num0=generate_unique_identifier()
-            )
-        )
-    
-    hosts.append(
-        Host(
-                name0='Dummy Host '+str(2), 
-                email0='dummy_host_email'+str(2)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-                has_cats0=False, 
-                has_dogs0=False, 
-                willing_to_house_smokers0=True, 
-                willing_to_provide_rides0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Misc. Info. for Dummy Host '+str(2),
-                id_num0=generate_unique_identifier()
-            )
-        )
-    
-    guests.append(
-        Guest(
-                name0='Dummy Guest '+str(3), 
-                email0='dummy_guest_email'+str(3)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
-                can_be_around_cats0=True, 
-                can_be_around_dogs0=True, 
-                smokes0=False, 
-                has_ride0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Mist. Info. for Dummy Host '+str(3),
-                id_num0=generate_unique_identifier()
-            )
-        )
-    
-    guests.append(
-        Guest(
-                name0='Dummy Guest '+str(4), 
-                email0='dummy_guest_email'+str(4)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
-                can_be_around_cats0=True, 
-                can_be_around_dogs0=True, 
-                smokes0=False, 
-                has_ride0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Mist. Info. for Dummy Host '+str(4),
-                id_num0=generate_unique_identifier()
-            )
-        )
-    
-    hosts.append(
-        Host(
-                name0='Dummy Host '+str(5), 
-                email0='dummy_host_email'+str(5)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-                has_cats0=False, 
-                has_dogs0=False, 
-                willing_to_house_smokers0=True, 
-                willing_to_provide_rides0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Misc. Info. for Dummy Host '+str(5),
-                id_num0=generate_unique_identifier()
-            )
-        )
-    
-    guests.append(
-        Guest(
-                name0='Dummy Guest '+str(6), 
-                email0='dummy_guest_email'+str(6)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
-                can_be_around_cats0=True, 
-                can_be_around_dogs0=True, 
-                smokes0=False, 
-                has_ride0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Mist. Info. for Dummy Host '+str(6),
-                id_num0=generate_unique_identifier()
-            )
-        )
-    
-    return hosts, guests
-
-def generate_random_dummy_hosts_and_guests(num_hosts=10, num_guests=10):
-    hosts = [Host(
-                name0='Dummy Host '+str(i), 
-                email0='dummy_host_email'+str(i)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_available0=frozenset(['Friday','Saturday','Sunday']), 
-                has_cats0=False, 
-                has_dogs0=False, 
-                willing_to_house_smokers0=True, 
-                willing_to_provide_rides0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Misc. Info. for Dummy Host '+str(i),
-                id_num0=generate_unique_identifier()
-                )
-            for i in xrange(num_hosts)]
-    guests = [Guest(
-                name0='Dummy Guest '+str(i), 
-                email0='dummy_guest_email'+str(i)+'@dummy.domain.com', 
-                phone_number0=reduce(lambda x,y:x+y,[str(random.randint(0,9)) for ii in xrange(10)]), 
-                days_housing_is_needed0=frozenset(['Friday','Saturday','Sunday']), 
-                can_be_around_cats0=True, 
-                can_be_around_dogs0=True, 
-                smokes0=False, 
-                has_ride0=True, 
-                late_night_tendencies0="survivors' club", 
-                misc_info0='Dummy Mist. Info. for Dummy Host '+str(i),
-                id_num0=generate_unique_identifier()
-                )
-            for i in xrange(num_guests)]
+    hosts=[
+        Host(name0='Host 1', id_num0=1),
+        Host(name0='Host 2', preferred_house_guests0=[4,5], id_num0=2),
+        Host(name0='Host 3', id_num0=3),
+    ]
+    guests=[
+        Guest(name0='Guest 4', preferred_house_guests0=[2,5], id_num0=4),
+        Guest(name0='Guest 5', preferred_house_guests0=[2,4], id_num0=5),
+        Guest(name0='Guest 6', id_num0=6),
+    ]
     return hosts, guests
 
 class Genome(object):
     
-    global housing_graph
+    global housing_graph, hosts, guests
     
     def fill_edges(self):
         edges = housing_graph.edges()
@@ -315,6 +196,14 @@ class Genome(object):
     
     def get_num_housed_guests(self):
         return len(self.chosen_edges)
+    
+    def get_P_value(self):
+        P = 0
+        for host in hosts:
+            P += len(list_intersection([(host.id_num,preferred_house_guest_id) for preferred_house_guest_id in host.preferred_house_guests],chosen_edges))
+        # Can't implement finding P values of guests that prefer each other bc each Host object actually prepresents a spot in a host's house, not necessarily just one host. 
+        
+        return P
 
 def mate(parent_1, parent_2):
     child = Genome()
@@ -361,9 +250,7 @@ def main():
     global housing_graph, hosts, guests
     
     # Add hosts and guests
-#    hosts, guests = generate_random_dummy_hosts_and_guests()
-#    hosts, guests = generate_fixed_dummy_hosts_and_guests()
-    hosts, guests = generate_random_dummy_hosts_and_guests(3,3)
+    hosts, guests = generate_fixed_dummy_hosts_and_guests()
     
     # Create Graph
     housing_graph = networkx.Graph()
@@ -414,3 +301,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
