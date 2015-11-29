@@ -3,15 +3,12 @@
 '''
 TODO:
     Very Important
-        get Genome class running
-            get mate() func working
         Add parsing of real data to add real hosts and guests instead of using the dummy func
             implement feature to have lists of preferred guests and hosts via a list of id_num values
             then get the P value determination method added to the genome class
     
     Less Important
-        add __repr__ method for Host, Guest, and Genome
-        add __str__ for Genome
+        
 '''
 
 import os
@@ -56,6 +53,23 @@ Host:
     Misc. Info.: '''+self.misc_info+'''
 '''
         return ans
+    
+    def __repr__(self):
+        ans = ''+ \
+            '''Host('''+ \
+                '''name0='''+self.name.__repr__()+''', '''+ \
+                '''email0='''+self.email.__repr__()+''', '''+ \
+                '''phone_number0='''+self.phone_number.__repr__()+''', '''+ \
+                '''days_housing_is_available0='''+self.days_housing_is_available.__repr__()+''', '''+ \
+                '''has_cats0='''+self.has_cats.__repr__()+''', '''+ \
+                '''has_dogs0='''+self.has_dogs.__repr__()+''', '''+ \
+                '''willing_to_house_smokers0='''+self.willing_to_house_smokers.__repr__()+''', '''+ \
+                '''willing_to_provide_rides0='''+self.willing_to_provide_rides.__repr__()+''', '''+ \
+                '''late_night_tendencies0='''+self.late_night_tendencies.__repr__()+''', '''+ \
+                '''misc_info0='''+self.misc_info.__repr__()+''', '''+ \
+                '''id_num0='''+self.id_num.__repr__()+ \
+            ''')'''
+        return ans
 
 class Guest(object):
     def __init__(self, name0='NO_NAME', email0='NO_EMAIL', phone_number0='', days_housing_is_needed0=frozenset(), can_be_around_cats0=False, can_be_around_dogs0=False, smokes0=True, has_ride0=False, late_night_tendencies0="survivors' club", misc_info0='', id_num0=-1):
@@ -87,6 +101,23 @@ Guest:
     Late Night Tendencies: '''+self.late_night_tendencies+'''
     Misc. Info.: '''+self.misc_info+'''
 '''
+        return ans
+    
+    def __repr__(self):
+        ans = ''+ \
+            '''Guest('''+ \
+                '''name0='''+self.name.__repr__()+''', '''+ \
+                '''email0='''+self.email.__repr__()+''', '''+ \
+                '''phone_number0='''+self.phone_number.__repr__()+''', '''+ \
+                '''days_housing_is_needed0='''+self.days_housing_is_needed.__repr__()+''', '''+ \
+                '''can_be_around_cats0='''+self.can_be_around_cats.__repr__()+''', '''+ \
+                '''can_be_around_dogs0='''+self.can_be_around_dogs.__repr__()+''', '''+ \
+                '''smokes0='''+self.smokes.__repr__()+''', '''+ \
+                '''has_ride0='''+self.has_ride.__repr__()+''', '''+ \
+                '''late_night_tendencies0='''+self.late_night_tendencies.__repr__()+''', '''+ \
+                '''misc_info0='''+self.misc_info.__repr__()+''', '''+ \
+                '''id_num0='''+self.id_num.__repr__()+ \
+            ''')'''
         return ans
 
 def are_compatible(host, guest):
@@ -264,10 +295,9 @@ class Genome(object):
         self.chosen_edges = []
         self.fill_edges()
     
-    def __str__(self):
-        ans = 'String method for genome not yet defined.'
-        return ans
-    
+    def __repr__(self):
+        return 'Genome('+str(sorted(self.chosen_edges, key=lambda x: x[0]))+')'
+        
     def mutate(self):
         random.shuffle(self.chosen_edges)
         self.chosen_edges = self.chosen_edges[:len(self.chosen_edges)/2]
@@ -346,18 +376,24 @@ def main():
     
     genomes = [Genome() for i in xrange(population_size)]
     for i,g in enumerate(genomes):
-        print i, sorted(g.chosen_edges, key=lambda x: x[0])
+        print i, g
     print '\n'
     for g in genomes:
         g.mutate()
     for i,g in enumerate(genomes):
-        print i, sorted(g.chosen_edges, key=lambda x: x[0])
+        print i, g
     print '\n'
     
     child = mate(genomes[0],genomes[1])
-    print 'Parent 1:', sorted(genomes[0].chosen_edges, key=lambda x: x[0])
-    print 'Parent 2:', sorted(genomes[1].chosen_edges, key=lambda x: x[0])
-    print 'Child:', sorted(child.chosen_edges, key=lambda x: x[0])
+    print 'Parent 1:', genomes[0]
+    print 'Parent 2:', genomes[1]
+    print 'Child:', child
+    
+    print guests[0].__str__()
+    print guests[0].__repr__()
+    
+    print hosts[0].__str__()
+    print hosts[0].__repr__()
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
