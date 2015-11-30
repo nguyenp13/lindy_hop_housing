@@ -3,10 +3,16 @@
 '''
 TODO:
     Very Important
-        change the genetic algorithm so that we can get better results by making it more greedy
+        get a fixed set of data to run our algorithm on
+        Make sure that the tournament selection works.
+        Tune the parameters of the GA
+            Should we make the crossover and mutations more greedy?
+            what's teh right populations size?
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
     
     Less Important
+        Refactor code so that we can run ga.py in parallel and have the results combined with a main.py
+        Refactor each section of the main GA code into functions
         Get late night tendencies to be taken into account for the P value determinations1 
 '''
 
@@ -24,10 +30,10 @@ from util import *
 
 SAVE_VISUALIZATIONS = True
 
-DEFAULT_NUM_DUMMY_HOSTS = 50
-DEFAULT_NUM_DUMMY_GUESTS = 50
+DEFAULT_NUM_DUMMY_HOSTS = 100
+DEFAULT_NUM_DUMMY_GUESTS = 100
 
-POPULATION_SIZE_DEFAULT_VALUE = 100
+POPULATION_SIZE_DEFAULT_VALUE = 10
 GENERATIONS_DEFAULT_VALUE = 50
 TOURNAMENT_SIZE_DEFAULT_VALUE = 2
 ELITE_PERCENT_DFAULT_VALUE = 50
@@ -188,6 +194,12 @@ def same_person(h1,h2):
             h1.misc_info==h2.misc_info 
 
 def generate_dummy_hosts_and_guests(num_hosts=DEFAULT_NUM_DUMMY_HOSTS, num_guests=DEFAULT_NUM_DUMMY_GUESTS):
+    if os.path.isfile('test_data.py'):
+         with open('test_data.py','r') as f:
+            host_line, guest_line = f.readlines()
+            exec host_line
+            exec guest_line
+            return hosts, guests
     host_ids = range(num_hosts)
     guest_ids = range(num_hosts, num_hosts+num_guests)
     num_preferred_house_guests=int(DEFAULT_NUM_DUMMY_HOSTS*0.3)
@@ -210,6 +222,10 @@ def generate_dummy_hosts_and_guests(num_hosts=DEFAULT_NUM_DUMMY_HOSTS, num_guest
                 preferred_house_guests0=list(set(random.sample(guest_ids,num_preferred_house_guests)+random.sample(host_ids,num_preferred_house_guests))), 
                 id_num0=i,
             ) for i in guest_ids]
+    with open('test_data.py','w') as f:
+        f.write('hosts='+hosts.__repr__())
+        f.write('\n')
+        f.write('guests='+guests.__repr__())
     return hosts, guests
 
 class Genome(object):
