@@ -3,14 +3,9 @@
 '''
 TODO:
     Very Important
-        get a fixed set of data to run our algorithm on
-        Make sure that the tournament selection works.
-        Tune the parameters of the GA
-            Should we make the crossover and mutations more greedy?
-            what's teh right populations size?
-        Add parsing of actual data to add real hosts and guests instead of using the dummy func
     
     Less Important
+        Add parsing of actual data to add real hosts and guests instead of using the dummy func
         Refactor code so that we can run ga.py in parallel and have the results combined with a main.py
         Refactor each section of the main GA code into functions
         Get late night tendencies to be taken into account for the P value determinations1 
@@ -33,9 +28,9 @@ SAVE_VISUALIZATIONS = True
 DEFAULT_NUM_DUMMY_HOSTS = 100
 DEFAULT_NUM_DUMMY_GUESTS = 100
 
-POPULATION_SIZE_DEFAULT_VALUE = 10
+POPULATION_SIZE_DEFAULT_VALUE = 25
 GENERATIONS_DEFAULT_VALUE = 50
-TOURNAMENT_SIZE_DEFAULT_VALUE = 2
+TOURNAMENT_SIZE_DEFAULT_VALUE = 8
 ELITE_PERCENT_DFAULT_VALUE = 50
 MATE_PERCENT_DEFAULT_VALUE = 30
 MUTATION_PERCENT_DEFAULT_VALUE = 20
@@ -344,6 +339,9 @@ def main():
     
     # Add hosts and guests
     hosts, guests = generate_dummy_hosts_and_guests()
+    print "Number of Host Spots:", len(hosts)
+    print "Number of Guests:", len(guests)
+    print 
     
     # Create Graph
     housing_graph = networkx.Graph()
@@ -393,8 +391,8 @@ def main():
         
         # Evaluate each population member
         inverse_N_P_scores = sorted([(index, 1.0/(1+genome.get_N_value()), 1.0/(1+genome.get_P_value())) for index,genome in enumerate(genomes)], key=lambda x:x[1]) # sorted from lowest to highest 1/N values
-        print "    Max N: "+str(1/inverse_N_P_scores[-1][1])
-        print "    Max P: "+str(1/max([e[2] for e in inverse_N_P_scores]))
+#        print "    Max N: "+str(1/inverse_N_P_scores[-1][1])
+#        print "    Max P: "+str(1/max([e[2] for e in inverse_N_P_scores]))
         # Save visualizations
         if SAVE_VISUALIZATIONS:
             if max_x<0 or max_y<0:
@@ -455,9 +453,9 @@ def main():
             if tournament_group_start_index>len(genomes)-1:
                 random.shuffle(pareto_ranking) # tournament groups are selected randomly
                 tournament_group_start_index=0
-            tournament_group_end_index = min(len(genomes)-1, tournament_group_start_index+tournament_size)
+            tournament_group_end_index = min(len(genomes), tournament_group_start_index+tournament_size)
             tournament_group = pareto_ranking[tournament_group_start_index:tournament_group_end_index]
-            for genome_pareto_score_set in sorted(tournament_group):
+            for genome_pareto_score_set in sorted(tournament_group, key=lambda x:x[1]):
                 if genome_pareto_score_set not in elites_scores:
                     elites_scores.append(genome_pareto_score_set)
                     break
@@ -468,7 +466,7 @@ def main():
         # Random mutation
         mutation=[]
         for genome in random.sample(genomes,num_mutated):
-            mutation.append(copy.deepcopy(genome))
+            mutation.append(genome.get_clone())
             mutation[-1].mutate()
         # Create the new generation
         genomes=elites+offspring+mutation
