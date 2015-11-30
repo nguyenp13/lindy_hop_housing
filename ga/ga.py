@@ -3,6 +3,8 @@
 '''
 TODO:
     Very Important
+        add code so that we keep track of the best pareto frontier we have so far
+            we'll just save all the score zero genomes from each generatino adn take the pareto frontier at the end
     
     Less Important
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
@@ -35,6 +37,7 @@ ELITE_PERCENT_DFAULT_VALUE = 50
 MATE_PERCENT_DEFAULT_VALUE = 30
 MUTATION_PERCENT_DEFAULT_VALUE = 20
 OUTPUT_DIR_DEFAULT_VALUE = './output'
+STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE = '.'
 
 housing_graph = None
 hosts = [] 
@@ -234,8 +237,11 @@ class Genome(object):
             if edge[0] not in [e[0] for e in self.chosen_edges] and edge[1] not in [e[1] for e in self.chosen_edges]:
                 self.chosen_edges.append(edge)
         
-    def __init__(self):
-        self.chosen_edges = []
+    def __init__(self, initial_edges=[]):
+        self.chosen_edges = initial_edges
+        if initial_edges==[]: 
+            # This is a weird hack, but it's necessary bc I suspect there's a bug in the compiler (either that or I'm doing something really funky that I don't realize that's making pointer get all crazy and cause all Genomes initialized with initial_edges=[] to have the same edges). 
+            self.chosen_edges=[]
         self.fill_edges()
     
     def __repr__(self):
@@ -295,26 +301,43 @@ def mate(parent_1, parent_2):
 
 def usage(): 
     # Example Usage: python ga.py -population_size 10 -generations 10
-    print >> sys.stderr, 'python '+__file__
+    print >> sys.stderr, 'python '+__file__+' <options>'
     print >> sys.stderr, ''
     print >> sys.stderr, 'Options:'
-    print >> sys.stderr, '    -population_size: Number of genomes per generation. Default value is '+str(POPULATION_SIZE_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, '    -generations: Number of generations. Default value is '+str(GENERATIONS_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, '    -tournament_size: Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, '    -elite_percent: Percent of the next generation\'s population that will be drawn from elite selection (usage: enter "30" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
-    print >> sys.stderr, '    -mate_percent: Percent of the next generation\'s population that will be drawn from offspring due to mating (usage: enter "30" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, '    -mutation_percent: Percent of the next generation\'s population that will be drawn from mutations (usage: enter "30" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, '    -output_dir: Output directory. Default value is '+OUTPUT_DIR_DEFAULT_VALUE+'.'
-    
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -population_size <int>'
+    print >> sys.stderr, '        Number of genomes per generation. Default value is '+str(POPULATION_SIZE_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -generations <int>'
+    print >> sys.stderr, '        Number of generations. Default value is '+str(GENERATIONS_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -tournament_size <int>'
+    print >> sys.stderr, '        Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -elite_percent <float>'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from elite selection (usage: enter "30" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -mate_percent <float>'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from offspring due to mating (usage: enter "30" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -mutation_percent <float>'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from mutations (usage: enter "30" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -starting_generation_descriptor_dir <string>'
+    print >> sys.stderr, '        Directory containing \'.py\' files that contain lists of Genome objects to be used as the starting point for this genetic search. Default value is '+STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -output_dir <string>'
+    print >> sys.stderr, '        Output directory. Default value is '+OUTPUT_DIR_DEFAULT_VALUE+'.'
     print >> sys.stderr, ''
     sys.exit(1) 
 
 def main(): 
     start_time = time.time()
     
-    if len(sys.argv) < 1: 
-        usage() 
     os.system('clear') 
+    
+    if len(sys.argv) < 1 or '-usage' in sys.argv: 
+        usage() 
     
     population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE)
     generations = get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_DEFAULT_VALUE)
@@ -323,6 +346,7 @@ def main():
     mate_percent = get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE)/100.0
     mutation_percent = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE)/100.0
     assertion(elite_percent+mate_percent+mutation_percent==1.0,"Sum of elite_percent, mate_percent, and mutation_percent is not equal to 100%.")
+    starting_generation_descriptor_dir = get_command_line_param_val_default_value(sys.argv, '-starting_generation_descriptor_dir', STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE)
     output_dir = get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE)
     makedirs(output_dir)
     
@@ -333,6 +357,8 @@ def main():
     print "    elite_percent: %.2f%%" % (100*elite_percent)
     print "    mate_percent: %.2f%%" % (100*mate_percent)
     print "    mutation_percent: %.2f%%" % (100*mutation_percent)
+    print "    starting_generation_descriptor_dir:", starting_generation_descriptor_dir
+    print "    output_dir:", output_dir
     print 
     
     global housing_graph, hosts, guests
@@ -357,10 +383,27 @@ def main():
                 housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
     
     # Genetic algorithm
-    genomes = [Genome() for i in xrange(population_size)]
+    starter_genomes_and_scores=[] # Get genomes from descriptor files
+    for potential_genome_list_descriptor_files in filter(lambda x:'.py'==x[-3:], list_dir_abs(starting_generation_descriptor_dir)):
+        lines=open(potential_genome_list_descriptor_files,'r').readlines()
+        for line in lines:
+            if 'genomes=[Genome([(' == line[:18]: # Not very secure :/ 
+                d = dict()
+                exec line in globals(), d
+                starter_genomes_and_scores += [(genome, genome.get_N_value(), genome.get_P_value()) for genome in d['genomes']]
+    starter_genomes_and_scores = sorted(starter_genomes_and_scores, key=lambda x:(x[0],-x[1])) 
+    genomes = []
+    prev_P=inf # We're only starting with the pareto frontier of all the starter genomes bc there are usually too many starter genomes
+    for (genome, N, P) in starter_genomes_and_scores:
+        if P<=prev_P:
+            genomes.append(genome)
+            prev_P = P
     maximal_matching = networkx.maximal_matching(housing_graph)
+    genomes.append(Genome())
     genomes[-1].chosen_edges=list(maximal_matching)
     genomes[-1].fill_edges()
+    while len(genomes)<population_size:
+        genomes.append(Genome())
     
     num_elites = int(round(elite_percent*population_size))
     num_offspring = int(round(mate_percent*population_size))
@@ -382,7 +425,6 @@ def main():
         subplot_all_points.set_xlabel('Inverse N Values')
         subplot_all_points.set_ylabel('Inverse P Values')
     for generation in xrange(generations):
-        print 
         print "Working on generation", generation
         
         # Save the population
@@ -391,8 +433,6 @@ def main():
         
         # Evaluate each population member
         inverse_N_P_scores = sorted([(index, 1.0/(1+genome.get_N_value()), 1.0/(1+genome.get_P_value())) for index,genome in enumerate(genomes)], key=lambda x:x[1]) # sorted from lowest to highest 1/N values
-#        print "    Max N: "+str(1/inverse_N_P_scores[-1][1])
-#        print "    Max P: "+str(1/max([e[2] for e in inverse_N_P_scores]))
         # Save visualizations
         if SAVE_VISUALIZATIONS:
             if max_x<0 or max_y<0:
@@ -403,11 +443,11 @@ def main():
             xy = list(set([e[1:3] for e in inverse_N_P_scores]))
             x = [e[0] for e in xy] # N values
             y = [e[1] for e in xy] # P values
-            #Save all points visualization
+            #Save point clouds over all generations visualization
             subplot_all_points.set_title('Generation '+str(generation))
             subplot_all_points.scatter(x, y, zorder=10, c='c', alpha=0.10)
             fig_all_points.savefig(os.path.join(output_dir,'all_generations_point_cloud/generation_'+str(generation)+'.png'))
-            # Save only this generation visualization
+            # Save only this generation point cloud visualization
             fig, subplot = matplotlib.pyplot.subplots()
             subplot.set_title('Generation '+str(generation))
             subplot.set_xlabel('Inverse N Values')
@@ -416,6 +456,7 @@ def main():
             subplot.set_ylim(bottom=0, top=max_y)
             subplot.scatter(x, y, zorder=10, c='r', alpha=1.0)
             fig.savefig(os.path.join(output_dir,'point_cloud/generation_'+str(generation)+'.png'))
+            matplotlib.pyplot.close(fig)
         # Get pareto ranking by N and P values
         pareto_ranking = [] 
         if SAVE_VISUALIZATIONS:
@@ -444,7 +485,9 @@ def main():
                 inverse_N_P_scores.pop(i)
             if len(inverse_N_P_scores)==0:
                 break
-        fig_pareto_curves.savefig(os.path.join(output_dir,'pareto_curves/generation_'+str(generation)+'.png'))
+        if SAVE_VISUALIZATIONS:
+            fig_pareto_curves.savefig(os.path.join(output_dir,'pareto_curves/generation_'+str(generation)+'.png'))
+            matplotlib.pyplot.close(fig_pareto_curves)
         assertion(len(inverse_N_P_scores)==0, "inverse_N_P_scores is not empty after pareto rank determination (all values should've been popped out of it.")
         # Tournament selection for the elites
         elites_scores = []
@@ -472,6 +515,12 @@ def main():
         genomes=elites+offspring+mutation
         genomes=genomes[:population_size]
         assertion(len(genomes)==population_size,"len(genomes) is not equal to population_size.")
+    if SAVE_VISUALIZATIONS:
+        matplotlib.pyplot.close(fig_all_points)
+    
+    # Save final population
+    with open(os.path.join(os.path.abspath(output_dir),'final_generation.py'),'w') as f:
+        f.write('genomes='+genomes.__repr__())
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)

@@ -13,6 +13,9 @@ import matplotlib.pyplot
 UNIQUE_IDENTIFIER_COUNTER = 0
 inf = float('inf')
 
+def list_dir_abs(basepath):
+    return map(lambda x: os.path.abspath(os.path.join(basepath, x)), os.listdir(basepath))
+
 def plot(ax, x, y, labels0=None):
     ax.scatter(x, y,zorder=10)
     labels=['']*len(y) if labels0==None else labels0
