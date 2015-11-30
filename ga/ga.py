@@ -3,12 +3,11 @@
 '''
 TODO:
     Very Important
-        add code so that we keep track of the best pareto frontier we have so far
-            we'll just save all the score zero genomes from each generatino adn take the pareto frontier at the end
-    
-    Less Important
+        add code so that we keep track of the global_pareto_frontier
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
         Refactor code so that we can run ga.py in parallel and have the results combined with a main.py
+    
+    Less Important
         Refactor each section of the main GA code into functions
         Get late night tendencies to be taken into account for the P value determinations1 
 '''
@@ -382,6 +381,8 @@ def main():
             if are_compatible(host, guest):
                 housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
     
+    global_pareto_frontier = [(None,inf,inf)] # Dummy initial object so that we don't have to check if it's empty every time we attempt to add something to it. 
+    
     # Genetic algorithm
     starter_genomes_and_scores=[] # Get genomes from descriptor files
     for potential_genome_list_descriptor_files in filter(lambda x:'.py'==x[-3:], list_dir_abs(starting_generation_descriptor_dir)):
@@ -421,9 +422,13 @@ def main():
         makedirs(os.path.join(output_dir,'all_generations_point_cloud'))
         makedirs(os.path.join(output_dir,'point_cloud'))
         makedirs(os.path.join(output_dir,'pareto_curves'))
+        makedirs(os.path.join(output_dir,'global_pareto_curve'))
         fig_all_points, subplot_all_points = matplotlib.pyplot.subplots()
         subplot_all_points.set_xlabel('Inverse N Values')
         subplot_all_points.set_ylabel('Inverse P Values')
+        fig_global_pareto_curve, subplot_global_pareto_curve = matplotlib.pyplot.subplots()
+        subplot_global_pareto_curve.set_xlabel('Inverse N Values')
+        subplot_global_pareto_curve.set_ylabel('Inverse P Values')
     for generation in xrange(generations):
         print "Working on generation", generation
         
@@ -440,6 +445,8 @@ def main():
                 max_y = max([e[2] for e in inverse_N_P_scores])
                 subplot_all_points.set_xlim(left=0, right=max_x)
                 subplot_all_points.set_ylim(bottom=0, top=max_y)
+                subplot_global_pareto_curve.set_xlim(left=0, right=max_x)
+                subplot_global_pareto_curve.set_ylim(bottom=0, top=max_y)
             xy = list(set([e[1:3] for e in inverse_N_P_scores]))
             x = [e[0] for e in xy] # N values
             y = [e[1] for e in xy] # P values
@@ -469,7 +476,35 @@ def main():
                     prev_inverse_P_score=inverse_P_score
                     indices_to_pop.append(i)
                     pareto_ranking.append((index_of_genome, pareto_rank_score, inverse_N_score, inverse_P_score))
+            # Update global_pareto_frontier
+            if pareto_rank_score==0:
+                new_global_pareto_frontier=sorted(pareto_ranking+global_pareto_frontier, key=lambda x:(x[-2],-x[-1]))
+                indices_to_avoid=[]
+                prev_P = inf
+                for i, elem in enumerate(new_global_pareto_frontier):
+                    P_score=elem[-1]
+                    if P_score < prev_P:
+                        prev_P = P_score
+                        continue
+                    indices_to_avoid.append(i)
+                for i in indices_to_avoid[::-1]:
+                    new_global_pareto_frontier.pop(i)
+                global_pareto_frontier=[]
+                for i, elem in enumerate(new_global_pareto_frontier):
+                    N_score=elem[-2]
+                    P_score=elem[-1]
+                    genome = genomes[elem[0]] if type(elem[0])==int else elem[0]
+                    assertion(isinstance(genome,Genome),"genome is not an instance of the class Genome.")
+                    global_pareto_frontier.append((genome,N_score,P_score))
             if SAVE_VISUALIZATIONS:
+                subplot_global_pareto_curve.set_title('Generation '+str(generation))
+                xy = sorted(list(set([(N_score,P_score) for (genome,N_score,P_score) in global_pareto_frontier])), key=lambda e:(e[0],-e[1]))
+                x = [e[0] for e in xy] # N values
+                y = [e[1] for e in xy] # P values
+                color=numpy.random.rand(3,1)
+                subplot_global_pareto_curve.plot(x, y, zorder=10, c=color, alpha=1.0)
+                subplot_global_pareto_curve.scatter(x, y, zorder=10, c=color, alpha=1.0)
+                fig_global_pareto_curve.savefig(os.path.join(output_dir,'global_pareto_curve/generation_'+str(generation)+'.png'))
                 subplot_pareto_curves.set_title('Generation '+str(generation))
                 subplot_pareto_curves.set_xlabel('Inverse N Values')
                 subplot_pareto_curves.set_ylabel('Inverse P Values')
@@ -517,10 +552,11 @@ def main():
         assertion(len(genomes)==population_size,"len(genomes) is not equal to population_size.")
     if SAVE_VISUALIZATIONS:
         matplotlib.pyplot.close(fig_all_points)
+        matplotlib.pyplot.close(fig_global_pareto_curve)
     
-    # Save final population
-    with open(os.path.join(os.path.abspath(output_dir),'final_generation.py'),'w') as f:
-        f.write('genomes='+genomes.__repr__())
+    # Save global_pareto_frontier
+    with open(os.path.join(os.path.abspath(output_dir),'global_pareto_frontier.py'),'w') as f:
+        f.write('genomes='+([e[0] for e in global_pareto_frontier]).__repr__())
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
