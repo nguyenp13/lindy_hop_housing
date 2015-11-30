@@ -30,7 +30,7 @@ DEFAULT_NUM_DUMMY_HOSTS = 100
 DEFAULT_NUM_DUMMY_GUESTS = 100
 
 POPULATION_SIZE_DEFAULT_VALUE = 25
-GENERATIONS_DEFAULT_VALUE = 50
+GENERATIONS_DEFAULT_VALUE = 500
 TOURNAMENT_SIZE_DEFAULT_VALUE = 8
 ELITE_PERCENT_DFAULT_VALUE = 50
 MATE_PERCENT_DEFAULT_VALUE = 30
@@ -345,8 +345,8 @@ def main():
     mate_percent = get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE)/100.0
     mutation_percent = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE)/100.0
     assertion(elite_percent+mate_percent+mutation_percent==1.0,"Sum of elite_percent, mate_percent, and mutation_percent is not equal to 100%.")
-    starting_generation_descriptor_dir = get_command_line_param_val_default_value(sys.argv, '-starting_generation_descriptor_dir', STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE)
-    output_dir = get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE)
+    starting_generation_descriptor_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-starting_generation_descriptor_dir', STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE))
+    output_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE))
     makedirs(output_dir)
     
     print "GA Parameters"
@@ -433,7 +433,7 @@ def main():
         print "Working on generation", generation
         
         # Save the population
-        with open(os.path.join(os.path.abspath(output_dir),'generation_'+str(generation)+'.py'),'w') as f:
+        with open(os.path.join(os.path.abspath(output_dir),'generation_%03d.py'%generation),'w') as f:
             f.write('genomes='+genomes.__repr__())
         
         # Evaluate each population member
@@ -453,7 +453,7 @@ def main():
             #Save point clouds over all generations visualization
             subplot_all_points.set_title('Generation '+str(generation))
             subplot_all_points.scatter(x, y, zorder=10, c='c', alpha=0.10)
-            fig_all_points.savefig(os.path.join(output_dir,'all_generations_point_cloud/generation_'+str(generation)+'.png'))
+            fig_all_points.savefig(os.path.join(output_dir,'all_generations_point_cloud/generation_%03d.png'%generation))
             # Save only this generation point cloud visualization
             fig, subplot = matplotlib.pyplot.subplots()
             subplot.set_title('Generation '+str(generation))
@@ -462,7 +462,7 @@ def main():
             subplot.set_xlim(left=0, right=max_x)
             subplot.set_ylim(bottom=0, top=max_y)
             subplot.scatter(x, y, zorder=10, c='r', alpha=1.0)
-            fig.savefig(os.path.join(output_dir,'point_cloud/generation_'+str(generation)+'.png'))
+            fig.savefig(os.path.join(output_dir,'point_cloud/generation_%03d.png'%generation))
             matplotlib.pyplot.close(fig)
         # Get pareto ranking by N and P values
         pareto_ranking = [] 
@@ -504,7 +504,7 @@ def main():
                 color=numpy.random.rand(3,1)
                 subplot_global_pareto_curve.plot(x, y, zorder=10, c=color, alpha=1.0)
                 subplot_global_pareto_curve.scatter(x, y, zorder=10, c=color, alpha=1.0)
-                fig_global_pareto_curve.savefig(os.path.join(output_dir,'global_pareto_curve/generation_'+str(generation)+'.png'))
+                fig_global_pareto_curve.savefig(os.path.join(output_dir,'global_pareto_curve/generation_%03d.png'%generation))
                 subplot_pareto_curves.set_title('Generation '+str(generation))
                 subplot_pareto_curves.set_xlabel('Inverse N Values')
                 subplot_pareto_curves.set_ylabel('Inverse P Values')
@@ -521,7 +521,7 @@ def main():
             if len(inverse_N_P_scores)==0:
                 break
         if SAVE_VISUALIZATIONS:
-            fig_pareto_curves.savefig(os.path.join(output_dir,'pareto_curves/generation_'+str(generation)+'.png'))
+            fig_pareto_curves.savefig(os.path.join(output_dir,'pareto_curves/generation_%03d.png'%generation))
             matplotlib.pyplot.close(fig_pareto_curves)
         assertion(len(inverse_N_P_scores)==0, "inverse_N_P_scores is not empty after pareto rank determination (all values should've been popped out of it.")
         # Tournament selection for the elites
