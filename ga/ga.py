@@ -3,12 +3,11 @@
 '''
 TODO:
     Very Important
-        Add parsing of real data to add real hosts and guests instead of using the dummy func
-        Save the __repr__() values of the genomes for each generation in text files
-        create a pareto curve image for each generation that includes points for each previously generated genome
+        change the genetic algorithm so that we can get better results by making it more greedy
+        Add parsing of actual data to add real hosts and guests instead of using the dummy func
     
     Less Important
-        Get late night tendencies to be taken into account for the P value determinations 
+        Get late night tendencies to be taken into account for the P value determinations1 
 '''
 
 import os
@@ -18,7 +17,23 @@ import networkx
 import time
 import random
 import copy
+import numpy
+import matplotlib
+import matplotlib.pyplot
 from util import *
+
+SAVE_VISUALIZATIONS = True
+
+DEFAULT_NUM_DUMMY_HOSTS = 50
+DEFAULT_NUM_DUMMY_GUESTS = 50
+
+POPULATION_SIZE_DEFAULT_VALUE = 100
+GENERATIONS_DEFAULT_VALUE = 50
+TOURNAMENT_SIZE_DEFAULT_VALUE = 2
+ELITE_PERCENT_DFAULT_VALUE = 50
+MATE_PERCENT_DEFAULT_VALUE = 30
+MUTATION_PERCENT_DEFAULT_VALUE = 20
+OUTPUT_DIR_DEFAULT_VALUE = './output'
 
 housing_graph = None
 hosts = [] 
@@ -172,17 +187,29 @@ def same_person(h1,h2):
             h1.preferred_house_guests==h2.preferred_house_guests and \
             h1.misc_info==h2.misc_info 
 
-def generate_fixed_dummy_hosts_and_guests():
-    hosts=[
-        Host(name0='Host 1', preferred_house_guests0=[4], id_num0=1),
-        Host(name0='Host 2', preferred_house_guests0=[5,6], id_num0=2),
-        Host(name0='Host 2', preferred_house_guests0=[5,6], id_num0=3),
-    ]
-    guests=[
-        Guest(name0='Guest 4', preferred_house_guests0=[1], id_num0=4),
-        Guest(name0='Guest 5', preferred_house_guests0=[2,3,6], id_num0=5),
-        Guest(name0='Guest 6', preferred_house_guests0=[2,5], id_num0=6),
-    ]
+def generate_dummy_hosts_and_guests(num_hosts=DEFAULT_NUM_DUMMY_HOSTS, num_guests=DEFAULT_NUM_DUMMY_GUESTS):
+    host_ids = range(num_hosts)
+    guest_ids = range(num_hosts, num_hosts+num_guests)
+    num_preferred_house_guests=int(DEFAULT_NUM_DUMMY_HOSTS*0.3)
+    
+    hosts = [Host(
+                name0='Dummy Host '+str(i), 
+                has_cats0=random.choice([True,False]),
+                has_dogs0=random.choice([True,False]),
+                willing_to_house_smokers0=random.choice([True,False]),
+                willing_to_provide_rides0=random.choice([True,False]),
+                preferred_house_guests0=list(set(random.sample(guest_ids,num_preferred_house_guests))),
+                id_num0=i,
+            ) for i in host_ids]
+    guests = [Guest(
+                name0='Dummy Guest '+str(i), 
+                can_be_around_cats0=random.choice([True,False]),
+                can_be_around_dogs0=random.choice([True,False]),
+                smokes0=random.choice([True,False]),
+                has_ride0=random.choice([True,False]),
+                preferred_house_guests0=list(set(random.sample(guest_ids,num_preferred_house_guests)+random.sample(host_ids,num_preferred_house_guests))), 
+                id_num0=i,
+            ) for i in guest_ids]
     return hosts, guests
 
 class Genome(object):
@@ -196,8 +223,8 @@ class Genome(object):
             if edge[0] not in [e[0] for e in self.chosen_edges] and edge[1] not in [e[1] for e in self.chosen_edges]:
                 self.chosen_edges.append(edge)
         
-    def __init__(self, initial_edges=[]):
-        self.chosen_edges = initial_edges
+    def __init__(self):
+        self.chosen_edges = []
         self.fill_edges()
     
     def __repr__(self):
@@ -208,7 +235,10 @@ class Genome(object):
         self.chosen_edges = self.chosen_edges[:len(self.chosen_edges)/2]
         self.fill_edges()
     
-    def get_num_housed_guests(self):
+    def get_clone(self):
+        return copy.deepcopy(self)
+    
+    def get_N_value(self):
         return len(self.chosen_edges)
     
     def get_P_value(self):
@@ -257,8 +287,14 @@ def usage():
     print >> sys.stderr, 'python '+__file__
     print >> sys.stderr, ''
     print >> sys.stderr, 'Options:'
-    print >> sys.stderr, '    -population_size: Number of genomes per generation.'
-    print >> sys.stderr, '    -generations: Number of generations.'
+    print >> sys.stderr, '    -population_size: Number of genomes per generation. Default value is '+str(POPULATION_SIZE_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '    -generations: Number of generations. Default value is '+str(GENERATIONS_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '    -tournament_size: Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '    -elite_percent: Percent of the next generation\'s population that will be drawn from elite selection (usage: enter "30" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
+    print >> sys.stderr, '    -mate_percent: Percent of the next generation\'s population that will be drawn from offspring due to mating (usage: enter "30" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '    -mutation_percent: Percent of the next generation\'s population that will be drawn from mutations (usage: enter "30" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '    -output_dir: Output directory. Default value is '+OUTPUT_DIR_DEFAULT_VALUE+'.'
+    
     print >> sys.stderr, ''
     sys.exit(1) 
 
@@ -269,12 +305,29 @@ def main():
         usage() 
     os.system('clear') 
     
-    population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', 10)
-    generations = get_command_line_param_val_default_value(sys.argv, '-generations', 10)
+    population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE)
+    generations = get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_DEFAULT_VALUE)
+    tournament_size = get_command_line_param_val_default_value(sys.argv, '-tournament_size', TOURNAMENT_SIZE_DEFAULT_VALUE)
+    elite_percent = get_command_line_param_val_default_value(sys.argv, '-elite_percent', ELITE_PERCENT_DFAULT_VALUE)/100.0
+    mate_percent = get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE)/100.0
+    mutation_percent = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE)/100.0
+    assertion(elite_percent+mate_percent+mutation_percent==1.0,"Sum of elite_percent, mate_percent, and mutation_percent is not equal to 100%.")
+    output_dir = get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE)
+    makedirs(output_dir)
+    
+    print "GA Parameters"
+    print "    population_size:", population_size
+    print "    generations:", generations
+    print "    tournament_size:", tournament_size
+    print "    elite_percent: %.2f%%" % (100*elite_percent)
+    print "    mate_percent: %.2f%%" % (100*mate_percent)
+    print "    mutation_percent: %.2f%%" % (100*mutation_percent)
+    print 
+    
     global housing_graph, hosts, guests
     
     # Add hosts and guests
-    hosts, guests = generate_fixed_dummy_hosts_and_guests()
+    hosts, guests = generate_dummy_hosts_and_guests()
     
     # Create Graph
     housing_graph = networkx.Graph()
@@ -289,55 +342,122 @@ def main():
             if are_compatible(host, guest):
                 housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
     
-    maximal_matching = networkx.maximal_matching(housing_graph)
-    print "Nodes:", housing_graph.nodes()
-    print "Edges:", housing_graph.edges()
-    print "Maximal Matching:", maximal_matching
-    print 
-    
+    # Genetic algorithm
     genomes = [Genome() for i in xrange(population_size)]
-    for i,g in enumerate(genomes):
-        print i, g
-    print '\n'
-    for g in genomes:
-        g.mutate()
-    for i,g in enumerate(genomes):
-        print i, g
-    print '\n'
+    maximal_matching = networkx.maximal_matching(housing_graph)
+    genomes[-1].chosen_edges=list(maximal_matching)
+    genomes[-1].fill_edges()
     
-    child = mate(genomes[0],genomes[1])
-    print 'Parent 1:', genomes[0]
-    print 'Parent 2:', genomes[1]
-    print 'Child:', child
+    num_elites = int(round(elite_percent*population_size))
+    num_offspring = int(round(mate_percent*population_size))
+    num_mutated = int(round(mutation_percent*population_size))
     
-    print guests[0].__str__()
-    print guests[0].__repr__()
+    # Save important data
+    with open(os.path.join(os.path.abspath(output_dir),'data.py'),'w') as f:
+        f.write('hosts='+hosts.__repr__())
+        f.write('\n')
+        f.write('guests='+guests.__repr__())
     
-    print hosts[0].__str__()
-    print hosts[0].__repr__()
-    
-    print 
-    print hosts.__repr__()
-    print 
-    
-#    for i,g in enumerate(genomes):
-#        print i, g, g.get_P_value()
-    
-    print 
-    print same_person(hosts[0],hosts[1])
-    print same_person(hosts[1],hosts[1])
-    print same_person(hosts[1],hosts[2])
-    print same_person(hosts[0],hosts[2])
-    print
-    
-    t = Genome([(1,4),(2,5),(3,6)])
-    print t, t.get_P_value()
-    print 
-    
-    for h in hosts:
-        print h
-    for g in guests:
-        print g
+    max_x = -1
+    max_y = -1
+    if SAVE_VISUALIZATIONS:
+        makedirs(os.path.join(output_dir,'all_generations_point_cloud'))
+        makedirs(os.path.join(output_dir,'point_cloud'))
+        makedirs(os.path.join(output_dir,'pareto_curves'))
+        fig_all_points, subplot_all_points = matplotlib.pyplot.subplots()
+        subplot_all_points.set_xlabel('Inverse N Values')
+        subplot_all_points.set_ylabel('Inverse P Values')
+    for generation in xrange(generations):
+        print 
+        print "Working on generation", generation
+        
+        # Save the population
+        with open(os.path.join(os.path.abspath(output_dir),'generation_'+str(generation)+'.py'),'w') as f:
+            f.write('genomes='+genomes.__repr__())
+        
+        # Evaluate each population member
+        inverse_N_P_scores = sorted([(index, 1.0/(1+genome.get_N_value()), 1.0/(1+genome.get_P_value())) for index,genome in enumerate(genomes)], key=lambda x:x[1]) # sorted from lowest to highest 1/N values
+        print "    Max N: "+str(1/inverse_N_P_scores[-1][1])
+        print "    Max P: "+str(1/max([e[2] for e in inverse_N_P_scores]))
+        # Save visualizations
+        if SAVE_VISUALIZATIONS:
+            if max_x<0 or max_y<0:
+                max_x = max([e[1] for e in inverse_N_P_scores])
+                max_y = max([e[2] for e in inverse_N_P_scores])
+                subplot_all_points.set_xlim(left=0, right=max_x)
+                subplot_all_points.set_ylim(bottom=0, top=max_y)
+            xy = list(set([e[1:3] for e in inverse_N_P_scores]))
+            x = [e[0] for e in xy] # N values
+            y = [e[1] for e in xy] # P values
+            #Save all points visualization
+            subplot_all_points.set_title('Generation '+str(generation))
+            subplot_all_points.scatter(x, y, zorder=10, c='c', alpha=0.10)
+            fig_all_points.savefig(os.path.join(output_dir,'all_generations_point_cloud/generation_'+str(generation)+'.png'))
+            # Save only this generation visualization
+            fig, subplot = matplotlib.pyplot.subplots()
+            subplot.set_title('Generation '+str(generation))
+            subplot.set_xlabel('Inverse N Values')
+            subplot.set_ylabel('Inverse P Values')
+            subplot.set_xlim(left=0, right=max_x)
+            subplot.set_ylim(bottom=0, top=max_y)
+            subplot.scatter(x, y, zorder=10, c='r', alpha=1.0)
+            fig.savefig(os.path.join(output_dir,'point_cloud/generation_'+str(generation)+'.png'))
+        # Get pareto ranking by N and P values
+        pareto_ranking = [] 
+        if SAVE_VISUALIZATIONS:
+            fig_pareto_curves, subplot_pareto_curves = matplotlib.pyplot.subplots()
+        for pareto_rank_score in xrange(len(inverse_N_P_scores)): # the number of pareto rank values is upper bounded by the number of points as they all may fall on different pareto curves (imagine if they all lied on the f(x)=x line). 
+            indices_to_pop=[]
+            prev_inverse_P_score = inf
+            for i,(index_of_genome, inverse_N_score, inverse_P_score) in enumerate(sorted(inverse_N_P_scores, key=lambda e:e[1])):
+                if inverse_P_score<prev_inverse_P_score:
+                    prev_inverse_P_score=inverse_P_score
+                    indices_to_pop.append(i)
+                    pareto_ranking.append((index_of_genome, pareto_rank_score, inverse_N_score, inverse_P_score))
+            if SAVE_VISUALIZATIONS:
+                subplot_pareto_curves.set_title('Generation '+str(generation))
+                subplot_pareto_curves.set_xlabel('Inverse N Values')
+                subplot_pareto_curves.set_ylabel('Inverse P Values')
+                subplot_pareto_curves.set_xlim(left=0, right=max_x)
+                subplot_pareto_curves.set_ylim(bottom=0, top=max_y)
+                xy = sorted(list(set([inverse_N_P_scores[i][1:3] for i in indices_to_pop])), key=lambda e:(e[0],-e[1]))
+                x = [e[0] for e in xy] # N values
+                y = [e[1] for e in xy] # P values
+                color=numpy.random.rand(3,1)
+                subplot_pareto_curves.plot(x, y, zorder=10, c=color, alpha=1.0)
+                subplot_pareto_curves.scatter(x, y, zorder=10, c=color, alpha=1.0) # points may overlap, and thus some differen colored points may appear on multiple lines, which gives the illusion that the coloring of the points and lines are different.
+            for i in indices_to_pop[::-1]:
+                inverse_N_P_scores.pop(i)
+            if len(inverse_N_P_scores)==0:
+                break
+        fig_pareto_curves.savefig(os.path.join(output_dir,'pareto_curves/generation_'+str(generation)+'.png'))
+        assertion(len(inverse_N_P_scores)==0, "inverse_N_P_scores is not empty after pareto rank determination (all values should've been popped out of it.")
+        # Tournament selection for the elites
+        elites_scores = []
+        tournament_group_start_index=inf
+        while len(elites_scores)<num_elites:
+            if tournament_group_start_index>len(genomes)-1:
+                random.shuffle(pareto_ranking) # tournament groups are selected randomly
+                tournament_group_start_index=0
+            tournament_group_end_index = min(len(genomes)-1, tournament_group_start_index+tournament_size)
+            tournament_group = pareto_ranking[tournament_group_start_index:tournament_group_end_index]
+            for genome_pareto_score_set in sorted(tournament_group):
+                if genome_pareto_score_set not in elites_scores:
+                    elites_scores.append(genome_pareto_score_set)
+                    break
+            tournament_group_start_index += tournament_size
+        elites = [genomes[index_of_genome] for (index_of_genome, pareto_rank_score, inverse_N_score, inverse_P_score) in elites_scores]
+        # Random mating 
+        offspring=[mate(random.choice(genomes),random.choice(genomes)) for i in xrange(num_offspring)]
+        # Random mutation
+        mutation=[]
+        for genome in random.sample(genomes,num_mutated):
+            mutation.append(copy.deepcopy(genome))
+            mutation[-1].mutate()
+        # Create the new generation
+        genomes=elites+offspring+mutation
+        genomes=genomes[:population_size]
+        assertion(len(genomes)==population_size,"len(genomes) is not equal to population_size.")
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)

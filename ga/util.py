@@ -7,8 +7,27 @@ import math
 import pdb
 import random
 import string
+import matplotlib
+import matplotlib.pyplot
 
 UNIQUE_IDENTIFIER_COUNTER = 0
+inf = float('inf')
+
+def plot(ax, x, y, labels0=None):
+    ax.scatter(x, y,zorder=10)
+    labels=['']*len(y) if labels0==None else labels0
+    for i in range(len(x)):
+        ax.annotate(labels[i], (x[i], y[i]))
+
+def makedirs(dirname):
+    if not os.path.exists(dirname):
+        os.makedirs(dirname)
+
+def divide(top,bottom):
+    # Like normal division, except interprets division by zero to be inf
+    if bottom==0.0:
+        return inf*top
+    return top/float(bottom)
 
 def list_intersection(l1,l2):
     return filter(set(l1).__contains__, l2)
