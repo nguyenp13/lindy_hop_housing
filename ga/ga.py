@@ -3,13 +3,45 @@
 '''
 TODO:
     Very Important
-        add code so that we keep track of the global_pareto_frontier
-        Add parsing of actual data to add real hosts and guests instead of using the dummy func
-        Refactor code so that we can run ga.py in parallel and have the results combined with a main.py
     
     Less Important
+        Get parallel GA runs to be multiplatform
+        Add parsing of actual data to add real hosts and guests instead of using the dummy func
         Refactor each section of the main GA code into functions
-        Get late night tendencies to be taken into account for the P value determinations1 
+        Get late night tendencies to be taken into account for the P value determinations
+
+Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events. 
+
+To understand how to use this code, see the usage() function or use "python ga.py -usage" on the commandline. 
+
+Tips and Hacks for Usage:
+    
+    It might be a good idea to tweak the parameters for population size according to your computer's available processing resources.
+    
+    It's a good idea to check the visualizations during the running to make sure everything is running as it should. 
+    
+    It's good to have the number of generations unreasonably high to a point where it won't be complete in the time you need it. This way, you can stop it from running and have the results the algorithm generated up to that point. This avoids having idle time that the algorithm isn't using to find better results. 
+        The results only get better as more generations pass since we save a global pareto frontier of the best results we've found so far over all the generations. 
+        If you want to continue running the algorithm from a certain point, just take all the ".py" files in the output folder and use that folder to seed the starting generation of a new genetic algorithm run using the "-starting_generation_descriptor_dir" option.
+    
+    It might be a good idea to seed the starting generation with a maximum matching. You can use "Genome(networkx.maximal_matching(housing_graph))" to generate a genome that uses a maximum matching. Put it in a list called "genomes" and put that into a '.py' file, and the file can be used to seed the starting generation of a new genetic algorithm run via the "-starting_generation_descriptor_dir" option. 
+    
+    Keep in mind that we want to balance exploration and exploitation to get good performance. 
+        If we seek exploration and high diversity, we will explore many of options, but these options may not necessarily be good. This will help us avoid local extrema in our search space but may take a lot of time.
+        If we seek exploitation and high quality, we will explore only the options that perform best. This, however, may lead us to get stuck in local extrema. 
+    
+    Ways we can balance exploration and exploitation for good performance include playing with:
+        Population Sizes: Larger population sizes will lead to more diversity, but processing each generation will also take more time.  Progress of the genetic search is saved after each generation is processed, so it might be a good idea to have each generation not take a long time as all time spent processing a generation is wasted if that generation has not completed processing. Smaller population sizes will have lower diversity. 
+        Tournament Sizes: Smaller tournament sizes increase diversity. Larger tournament sizes lead to greedier searches. 
+        Elite Percent: Having a higher percent of elites can decrease diversity and vice-versa (though to what extent this happens also depends on the tournament size). If there are more elites, it is more likely that they will be chosen for crossover and mutation (the selection for both of these is random selection) and vice-versa. Keep in mind that the impact that the percent of elites has on diversity is affected by the tournament size. 
+        Mate Percent: Having a higher mate percent can increase diversity as the parents chosen for the mating is random. However, how diverse the new children will be depends on the number of elites in the population, which is dependent on the elite percent and the tournament size, as a larger percent of elites will lead to a larger probability that they will be chosen as parents to create offspring. However, we should keep in mind that these offspring may not necessarily be as elite as the parents. 
+        Mutation Percent: Having a higher mutation percent can increase diversity as the genomes chosen for mutation is random. However, how diverse the mutated genomes will be depends on the number of elites in the population, which is dependent on the elite percent and the tournament size, as a larger percent of elites will lead to a larger probability that they will be chosen to be mutated. However, we should keep in mind that these mutated genomes may not necessarily be as elite as the original unmutated elite genome.
+        Island GA: Having many different independently growing populations can lead to diversity as each population will go start in and go in different places in the search space. More independent populations will lead to more diverse results. Having these populations crossover with each other can increase exploitation. This can be done wither probabilistically or deterministically. This is worth considering to increase diversity. The interpopulation crossover on performance is hard to determine, but it does necessarily increase exploitation, which can be helpful to balance out the diversity induced by having independent populations.
+        Keep in mind that genetic algorithms are randomized algorithms and that there is a lot of noise in the performance. The amount of noise is impacted by the nature of the problem as well as the parameters of our GA. Thus, a lot of the noise in our results is out of our hands, so it's hard to know what decisions are best without getting a strong understanding of the noise, which we can only gain through studying the results of our genetic algorithm with different inputs and parameter selections run a sufficient number of times (a sufficient number of times is also hard to determine). 
+        Keep in mind that exploitation and exploration is not something that is easily measured and that it's hard to measure the impact that they have on the results. Two separate parameters may impact diversity, but those may affect the results in different ways. Simply knowing that diversity is impacted does not say anything about the new population members that are being looked at. Thus, it says nothing about how it impacts the results. We'll have to clearly study the results to really know how the impact of the parameters as we do not get a significant amount of insight about our results simply through knowing how the parameters impact exploration and exploitation. 
+    
+    The starting generation has a noteable impact on the performance of our genetic algorithm. Whichever direction we go in our search space depends on our starting population/starting point. Different starting generations will be different distances from the global extrema of our search space. Starting closer to global extrema is obviously better, but it is hard to determine where in the search space a starting generation is, where the global extrema are, and how far any pair of points are in the search space or even what metric is best to determine distance. We can really know nothing about how well our starting generation performs as we know very little about our search space (which is why we study it and use genetic algorithms to explore it rather than a more elegant method), but we do know that it has an impact. 
+        We can manipulate our starting generation using the "-starting_generation_descriptor_dir" command line option. 
 '''
 
 import os
@@ -29,14 +61,14 @@ SAVE_VISUALIZATIONS = True
 DEFAULT_NUM_DUMMY_HOSTS = 100
 DEFAULT_NUM_DUMMY_GUESTS = 100
 
-POPULATION_SIZE_DEFAULT_VALUE = 25
-GENERATIONS_DEFAULT_VALUE = 500
+POPULATION_SIZE_DEFAULT_VALUE = 100
+GENERATIONS_DEFAULT_VALUE = 50000000
 TOURNAMENT_SIZE_DEFAULT_VALUE = 8
 ELITE_PERCENT_DFAULT_VALUE = 50
 MATE_PERCENT_DEFAULT_VALUE = 30
 MUTATION_PERCENT_DEFAULT_VALUE = 20
-OUTPUT_DIR_DEFAULT_VALUE = './output'
 STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE = '.'
+OUTPUT_DIR_DEFAULT_VALUE = './output'
 
 housing_graph = None
 hosts = [] 
@@ -298,90 +330,9 @@ def mate(parent_1, parent_2):
     child.fill_edges()
     return child
 
-def usage(): 
-    # Example Usage: python ga.py -population_size 10 -generations 10
-    print >> sys.stderr, 'python '+__file__+' <options>'
-    print >> sys.stderr, ''
-    print >> sys.stderr, 'Options:'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -population_size <int>'
-    print >> sys.stderr, '        Number of genomes per generation. Default value is '+str(POPULATION_SIZE_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -generations <int>'
-    print >> sys.stderr, '        Number of generations. Default value is '+str(GENERATIONS_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -tournament_size <int>'
-    print >> sys.stderr, '        Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -elite_percent <float>'
-    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from elite selection (usage: enter "30" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -mate_percent <float>'
-    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from offspring due to mating (usage: enter "30" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -mutation_percent <float>'
-    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from mutations (usage: enter "30" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -starting_generation_descriptor_dir <string>'
-    print >> sys.stderr, '        Directory containing \'.py\' files that contain lists of Genome objects to be used as the starting point for this genetic search. Default value is '+STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE+'.'
-    print >> sys.stderr, ''
-    print >> sys.stderr, '    -output_dir <string>'
-    print >> sys.stderr, '        Output directory. Default value is '+OUTPUT_DIR_DEFAULT_VALUE+'.'
-    print >> sys.stderr, ''
-    sys.exit(1) 
-
-def main(): 
-    start_time = time.time()
+def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DEFAULT_VALUE, tournament_size=TOURNAMENT_SIZE_DEFAULT_VALUE, elite_percent=ELITE_PERCENT_DFAULT_VALUE, mate_percent=MATE_PERCENT_DEFAULT_VALUE, mutation_percent=MUTATION_PERCENT_DEFAULT_VALUE,starting_generation_descriptor_dir=STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE,output_dir=OUTPUT_DIR_DEFAULT_VALUE): 
     
-    os.system('clear') 
-    
-    if len(sys.argv) < 1 or '-usage' in sys.argv: 
-        usage() 
-    
-    population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE)
-    generations = get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_DEFAULT_VALUE)
-    tournament_size = get_command_line_param_val_default_value(sys.argv, '-tournament_size', TOURNAMENT_SIZE_DEFAULT_VALUE)
-    elite_percent = get_command_line_param_val_default_value(sys.argv, '-elite_percent', ELITE_PERCENT_DFAULT_VALUE)/100.0
-    mate_percent = get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE)/100.0
-    mutation_percent = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE)/100.0
-    assertion(elite_percent+mate_percent+mutation_percent==1.0,"Sum of elite_percent, mate_percent, and mutation_percent is not equal to 100%.")
-    starting_generation_descriptor_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-starting_generation_descriptor_dir', STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE))
-    output_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE))
-    makedirs(output_dir)
-    
-    print "GA Parameters"
-    print "    population_size:", population_size
-    print "    generations:", generations
-    print "    tournament_size:", tournament_size
-    print "    elite_percent: %.2f%%" % (100*elite_percent)
-    print "    mate_percent: %.2f%%" % (100*mate_percent)
-    print "    mutation_percent: %.2f%%" % (100*mutation_percent)
-    print "    starting_generation_descriptor_dir:", starting_generation_descriptor_dir
-    print "    output_dir:", output_dir
-    print 
-    
-    global housing_graph, hosts, guests
-    
-    # Add hosts and guests
-    hosts, guests = generate_dummy_hosts_and_guests()
-    print "Number of Host Spots:", len(hosts)
-    print "Number of Guests:", len(guests)
-    print 
-    
-    # Create Graph
-    housing_graph = networkx.Graph()
-    
-    for host in hosts:
-        housing_graph.add_node(host.id_num)
-    for guest in guests:
-        housing_graph.add_node(guest.id_num)
-    
-    for host in hosts:
-        for guest in guests:
-            if are_compatible(host, guest):
-                housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
-    
-    global_pareto_frontier = [(None,inf,inf)] # Dummy initial object so that we don't have to check if it's empty every time we attempt to add something to it. 
+    global_pareto_frontier = [] # Dummy initial object so that we don't have to check if it's empty every time we attempt to add something to it. 
     
     # Genetic algorithm
     starter_genomes_and_scores=[] # Get genomes from descriptor files
@@ -399,22 +350,12 @@ def main():
         if P<=prev_P:
             genomes.append(genome)
             prev_P = P
-    maximal_matching = networkx.maximal_matching(housing_graph)
-    genomes.append(Genome())
-    genomes[-1].chosen_edges=list(maximal_matching)
-    genomes[-1].fill_edges()
     while len(genomes)<population_size:
         genomes.append(Genome())
     
     num_elites = int(round(elite_percent*population_size))
     num_offspring = int(round(mate_percent*population_size))
     num_mutated = int(round(mutation_percent*population_size))
-    
-    # Save important data
-    with open(os.path.join(os.path.abspath(output_dir),'data.py'),'w') as f:
-        f.write('hosts='+hosts.__repr__())
-        f.write('\n')
-        f.write('guests='+guests.__repr__())
     
     max_x = -1
     max_y = -1
@@ -550,13 +491,105 @@ def main():
         genomes=elites+offspring+mutation
         genomes=genomes[:population_size]
         assertion(len(genomes)==population_size,"len(genomes) is not equal to population_size.")
+        # Save global_pareto_frontier
+        with open(os.path.join(os.path.abspath(output_dir),'global_pareto_frontier.py'),'w') as f:
+            # We want to save this on every generation in case the running stops for any reason ebfore we've reached our final generation.
+            f.write('genomes='+([e[0] for e in global_pareto_frontier]).__repr__())
+        
     if SAVE_VISUALIZATIONS:
         matplotlib.pyplot.close(fig_all_points)
         matplotlib.pyplot.close(fig_global_pareto_curve)
+
+def usage(): 
+    # Example Usage: python ga.py -population_size 10 -generations 10
+    print >> sys.stderr, 'python '+__file__+' <options>'
+    print >> sys.stderr, ''
+    print >> sys.stderr, 'Options:'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -population_size <int>'
+    print >> sys.stderr, '        Number of genomes per generation. Default value is '+str(POPULATION_SIZE_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -generations <int>'
+    print >> sys.stderr, '        Number of generations. Default value is '+str(GENERATIONS_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -tournament_size <int>'
+    print >> sys.stderr, '        Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -elite_percent <float>'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from elite selection (usage: enter "30" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -mate_percent <float>'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from offspring due to mating (usage: enter "30" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -mutation_percent <float>'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from mutations (usage: enter "30" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -starting_generation_descriptor_dir <string>'
+    print >> sys.stderr, '        Directory containing \'.py\' files that contain lists of Genome objects to be used as the starting point for this genetic search. Default value is '+STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE+'.'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -output_dir <string>'
+    print >> sys.stderr, '        Output directory. Default value is '+OUTPUT_DIR_DEFAULT_VALUE+'.'
+    print >> sys.stderr, ''
+    sys.exit(1) 
+
+def main():
+    start_time = time.time()
     
-    # Save global_pareto_frontier
-    with open(os.path.join(os.path.abspath(output_dir),'global_pareto_frontier.py'),'w') as f:
-        f.write('genomes='+([e[0] for e in global_pareto_frontier]).__repr__())
+    global housing_graph, hosts, guests
+    
+    os.system('clear') 
+    
+    if len(sys.argv) < 1 or '-usage' in sys.argv: 
+        usage()
+    
+    population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE)
+    generations = get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_DEFAULT_VALUE)
+    tournament_size = get_command_line_param_val_default_value(sys.argv, '-tournament_size', TOURNAMENT_SIZE_DEFAULT_VALUE)
+    elite_percent = get_command_line_param_val_default_value(sys.argv, '-elite_percent', ELITE_PERCENT_DFAULT_VALUE)/100.0
+    mate_percent = get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE)/100.0
+    mutation_percent = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE)/100.0
+    assertion(elite_percent+mate_percent+mutation_percent==1.0,"Sum of elite_percent, mate_percent, and mutation_percent is not equal to 100%.")
+    starting_generation_descriptor_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-starting_generation_descriptor_dir', STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE))
+    output_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE))
+    makedirs(output_dir)
+    
+    print "GA Parameters"
+    print "    population_size:", population_size
+    print "    generations:", generations
+    print "    tournament_size:", tournament_size
+    print "    elite_percent: %.2f%%" % (100*elite_percent)
+    print "    mate_percent: %.2f%%" % (100*mate_percent)
+    print "    mutation_percent: %.2f%%" % (100*mutation_percent)
+    print "    starting_generation_descriptor_dir:", starting_generation_descriptor_dir
+    print "    output_dir:", output_dir
+    print 
+    
+    # Add hosts and guests
+    hosts, guests = generate_dummy_hosts_and_guests()
+    print "Number of Host Spots:", len(hosts)
+    print "Number of Guests:", len(guests)
+    print 
+    
+    # Save host and guest data
+    with open(os.path.join(os.path.abspath(output_dir),'data.py'),'w') as f:
+        f.write('hosts='+hosts.__repr__())
+        f.write('\n')
+        f.write('guests='+guests.__repr__())
+    
+    # Create Graph
+    housing_graph = networkx.Graph()
+    
+    for host in hosts:
+        housing_graph.add_node(host.id_num)
+    for guest in guests:
+        housing_graph.add_node(guest.id_num)
+    
+    for host in hosts:
+        for guest in guests:
+            if are_compatible(host, guest):
+                housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
+    
+    ga(population_size,generations,tournament_size,elite_percent,mate_percent,mutation_percent,starting_generation_descriptor_dir,output_dir)
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
