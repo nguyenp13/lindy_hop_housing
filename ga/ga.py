@@ -3,12 +3,18 @@
 '''
 TODO:
     Very Important
+        fix scaling of images
+            make sure the scaling is correct by checking actual numbers
+        save text files of the actual numbers
+        put max p adn max n in the title
+        add little somewhat visible grid lines in the graphs
+        Get parallel GA runs to be multiplatform
+        
     
     Less Important
-        Get parallel GA runs to be multiplatform
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
+            See how this works with real data
         Refactor each section of the main GA code into functions
-        Get late night tendencies to be taken into account for the P value determinations
 
 Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events. 
 
@@ -56,13 +62,24 @@ import matplotlib
 import matplotlib.pyplot
 from util import *
 
+START_TIME=time.time()
 SAVE_VISUALIZATIONS = True
+VISUALIZATION_MIN_X=0
+VISUALIZATION_MIN_Y=0
+VISUALIZATION_MAX_X=0.016
+VISUALIZATION_MAX_Y=0.030
+NUM_X_TICKS=10
+NUM_Y_TICKS=10
+X_TICK_VALUES=map(lambda x:VISUALIZATION_MIN_X+(VISUALIZATION_MAX_X-VISUALIZATION_MIN_X)*(float(x)/NUM_X_TICKS),range(NUM_X_TICKS+1))
+Y_TICK_VALUES=map(lambda x:VISUALIZATION_MIN_Y+(VISUALIZATION_MAX_Y-VISUALIZATION_MIN_Y)*(float(x)/NUM_Y_TICKS),range(NUM_Y_TICKS+1))
+X_TICK_LABELS=[str(round(divide(1.0,e)-1,1)) for e in X_TICK_VALUES]
+Y_TICK_LABELS=[str(round(divide(1.0,e)-1,1)) for e in Y_TICK_VALUES]
 
 DEFAULT_NUM_DUMMY_HOSTS = 100
 DEFAULT_NUM_DUMMY_GUESTS = 100
 
-POPULATION_SIZE_DEFAULT_VALUE = 100
-GENERATIONS_DEFAULT_VALUE = 50000000
+POPULATION_SIZE_DEFAULT_VALUE = 5
+GENERATIONS_DEFAULT_VALUE = 50
 TOURNAMENT_SIZE_DEFAULT_VALUE = 8
 ELITE_PERCENT_DFAULT_VALUE = 50
 MATE_PERCENT_DEFAULT_VALUE = 30
@@ -332,6 +349,8 @@ def mate(parent_1, parent_2):
 
 def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DEFAULT_VALUE, tournament_size=TOURNAMENT_SIZE_DEFAULT_VALUE, elite_percent=ELITE_PERCENT_DFAULT_VALUE, mate_percent=MATE_PERCENT_DEFAULT_VALUE, mutation_percent=MUTATION_PERCENT_DEFAULT_VALUE,starting_generation_descriptor_dir=STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE,output_dir=OUTPUT_DIR_DEFAULT_VALUE): 
     
+    global SAVE_VISUALIZATIONS
+    
     global_pareto_frontier = [] # Dummy initial object so that we don't have to check if it's empty every time we attempt to add something to it. 
     
     # Genetic algorithm
@@ -357,21 +376,24 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
     num_offspring = int(round(mate_percent*population_size))
     num_mutated = int(round(mutation_percent*population_size))
     
-    max_x = -1
-    max_y = -1
     if SAVE_VISUALIZATIONS:
         makedirs(os.path.join(output_dir,'all_generations_point_cloud'))
         makedirs(os.path.join(output_dir,'point_cloud'))
         makedirs(os.path.join(output_dir,'pareto_curves'))
         makedirs(os.path.join(output_dir,'global_pareto_curve'))
         fig_all_points, subplot_all_points = matplotlib.pyplot.subplots()
-        subplot_all_points.set_xlabel('Inverse N Values')
-        subplot_all_points.set_ylabel('Inverse P Values')
+        subplot_all_points.set_xlabel('N Values')
+        subplot_all_points.set_ylabel('P Values')
+        subplot_all_points.set_xlim(left=0, right=VISUALIZATION_MAX_X)
+        subplot_all_points.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
         fig_global_pareto_curve, subplot_global_pareto_curve = matplotlib.pyplot.subplots()
-        subplot_global_pareto_curve.set_xlabel('Inverse N Values')
-        subplot_global_pareto_curve.set_ylabel('Inverse P Values')
+        subplot_global_pareto_curve.set_xlabel('N Values')
+        subplot_global_pareto_curve.set_ylabel('P Values')
+        subplot_global_pareto_curve.set_xlim(left=0, right=VISUALIZATION_MAX_X)
+        subplot_global_pareto_curve.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
     for generation in xrange(generations):
-        print "Working on generation", generation
+        SAVE_VISUALIZATIONS=(generation%5==0)
+        print "%-30s Elapsed Time: %015f" % ("Working on generation "+str(generation)+'.',time.time()-START_TIME)
         
         # Save the population
         with open(os.path.join(os.path.abspath(output_dir),'generation_%03d.py'%generation),'w') as f:
@@ -381,27 +403,28 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
         inverse_N_P_scores = sorted([(index, 1.0/(1+genome.get_N_value()), 1.0/(1+genome.get_P_value())) for index,genome in enumerate(genomes)], key=lambda x:x[1]) # sorted from lowest to highest 1/N values
         # Save visualizations
         if SAVE_VISUALIZATIONS:
-            if max_x<0 or max_y<0:
-                max_x = max([e[1] for e in inverse_N_P_scores])
-                max_y = max([e[2] for e in inverse_N_P_scores])
-                subplot_all_points.set_xlim(left=0, right=max_x)
-                subplot_all_points.set_ylim(bottom=0, top=max_y)
-                subplot_global_pareto_curve.set_xlim(left=0, right=max_x)
-                subplot_global_pareto_curve.set_ylim(bottom=0, top=max_y)
             xy = list(set([e[1:3] for e in inverse_N_P_scores]))
             x = [e[0] for e in xy] # N values
             y = [e[1] for e in xy] # P values
             #Save point clouds over all generations visualization
             subplot_all_points.set_title('Generation '+str(generation))
+            subplot_all_points.set_xticks(X_TICK_VALUES)
+            subplot_all_points.set_yticks(Y_TICK_VALUES)
+            subplot_all_points.set_xticklabels(X_TICK_LABELS)
+            subplot_all_points.set_yticklabels(Y_TICK_LABELS)
             subplot_all_points.scatter(x, y, zorder=10, c='c', alpha=0.10)
             fig_all_points.savefig(os.path.join(output_dir,'all_generations_point_cloud/generation_%03d.png'%generation))
             # Save only this generation point cloud visualization
             fig, subplot = matplotlib.pyplot.subplots()
             subplot.set_title('Generation '+str(generation))
-            subplot.set_xlabel('Inverse N Values')
-            subplot.set_ylabel('Inverse P Values')
-            subplot.set_xlim(left=0, right=max_x)
-            subplot.set_ylim(bottom=0, top=max_y)
+            subplot.set_xticks(X_TICK_VALUES)
+            subplot.set_yticks(Y_TICK_VALUES)
+            subplot.set_xticklabels(X_TICK_LABELS)
+            subplot.set_yticklabels(Y_TICK_LABELS)
+            subplot.set_xlabel('N Values')
+            subplot.set_ylabel('P Values')
+            subplot.set_xlim(left=0, right=VISUALIZATION_MAX_X)
+            subplot.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
             subplot.scatter(x, y, zorder=10, c='r', alpha=1.0)
             fig.savefig(os.path.join(output_dir,'point_cloud/generation_%03d.png'%generation))
             matplotlib.pyplot.close(fig)
@@ -439,6 +462,10 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
                     global_pareto_frontier.append((genome,N_score,P_score))
             if SAVE_VISUALIZATIONS:
                 subplot_global_pareto_curve.set_title('Generation '+str(generation))
+                subplot_global_pareto_curve.set_xticklabels(X_TICK_VALUES)
+                subplot_global_pareto_curve.set_yticklabels(Y_TICK_VALUES)
+                subplot_global_pareto_curve.set_xticklabels(X_TICK_LABELS)
+                subplot_global_pareto_curve.set_yticklabels(Y_TICK_LABELS)
                 xy = sorted(list(set([(N_score,P_score) for (genome,N_score,P_score) in global_pareto_frontier])), key=lambda e:(e[0],-e[1]))
                 x = [e[0] for e in xy] # N values
                 y = [e[1] for e in xy] # P values
@@ -447,10 +474,14 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
                 subplot_global_pareto_curve.scatter(x, y, zorder=10, c=color, alpha=1.0)
                 fig_global_pareto_curve.savefig(os.path.join(output_dir,'global_pareto_curve/generation_%03d.png'%generation))
                 subplot_pareto_curves.set_title('Generation '+str(generation))
-                subplot_pareto_curves.set_xlabel('Inverse N Values')
-                subplot_pareto_curves.set_ylabel('Inverse P Values')
-                subplot_pareto_curves.set_xlim(left=0, right=max_x)
-                subplot_pareto_curves.set_ylim(bottom=0, top=max_y)
+                subplot_pareto_curves.set_xticklabels(X_TICK_VALUES)
+                subplot_pareto_curves.set_yticklabels(Y_TICK_VALUES)
+                subplot_pareto_curves.set_xticklabels(X_TICK_LABELS)
+                subplot_pareto_curves.set_yticklabels(Y_TICK_LABELS)
+                subplot_pareto_curves.set_xlabel('N Values')
+                subplot_pareto_curves.set_ylabel('P Values')
+                subplot_pareto_curves.set_xlim(left=0, right=VISUALIZATION_MAX_X)
+                subplot_pareto_curves.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
                 xy = sorted(list(set([inverse_N_P_scores[i][1:3] for i in indices_to_pop])), key=lambda e:(e[0],-e[1]))
                 x = [e[0] for e in xy] # N values
                 y = [e[1] for e in xy] # P values
@@ -516,13 +547,13 @@ def usage():
     print >> sys.stderr, '        Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
     print >> sys.stderr, ''
     print >> sys.stderr, '    -elite_percent <float>'
-    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from elite selection (usage: enter "30" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from elite selection (usage: enter "30.0" for 30%). Default value is '+str(ELITE_PERCENT_DFAULT_VALUE)+'.'
     print >> sys.stderr, ''
     print >> sys.stderr, '    -mate_percent <float>'
-    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from offspring due to mating (usage: enter "30" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from offspring due to mating (usage: enter "30.0" for 30%). Default value is '+str(MATE_PERCENT_DEFAULT_VALUE)+'.'
     print >> sys.stderr, ''
     print >> sys.stderr, '    -mutation_percent <float>'
-    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from mutations (usage: enter "30" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
+    print >> sys.stderr, '        Percent of the next generation\'s population to be drawn from mutations (usage: enter "30.0" for 30%). Default value is '+str(MUTATION_PERCENT_DEFAULT_VALUE)+'.'
     print >> sys.stderr, ''
     print >> sys.stderr, '    -starting_generation_descriptor_dir <string>'
     print >> sys.stderr, '        Directory containing \'.py\' files that contain lists of Genome objects to be used as the starting point for this genetic search. Default value is '+STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE+'.'
@@ -533,7 +564,6 @@ def usage():
     sys.exit(1) 
 
 def main():
-    start_time = time.time()
     
     global housing_graph, hosts, guests
     
@@ -542,12 +572,12 @@ def main():
     if len(sys.argv) < 1 or '-usage' in sys.argv: 
         usage()
     
-    population_size = get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE)
-    generations = get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_DEFAULT_VALUE)
-    tournament_size = get_command_line_param_val_default_value(sys.argv, '-tournament_size', TOURNAMENT_SIZE_DEFAULT_VALUE)
-    elite_percent = get_command_line_param_val_default_value(sys.argv, '-elite_percent', ELITE_PERCENT_DFAULT_VALUE)/100.0
-    mate_percent = get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE)/100.0
-    mutation_percent = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE)/100.0
+    population_size = int(get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE))
+    generations = int(get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_DEFAULT_VALUE))
+    tournament_size = int(get_command_line_param_val_default_value(sys.argv, '-tournament_size', TOURNAMENT_SIZE_DEFAULT_VALUE))
+    elite_percent = float(get_command_line_param_val_default_value(sys.argv, '-elite_percent', ELITE_PERCENT_DFAULT_VALUE))/100.0
+    mate_percent = float(get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE))/100.0
+    mutation_percent = float(get_command_line_param_val_default_value(sys.argv, '-mutation_percent', MUTATION_PERCENT_DEFAULT_VALUE))/100.0
     assertion(elite_percent+mate_percent+mutation_percent==1.0,"Sum of elite_percent, mate_percent, and mutation_percent is not equal to 100%.")
     starting_generation_descriptor_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-starting_generation_descriptor_dir', STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE))
     output_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE))
@@ -592,7 +622,7 @@ def main():
     ga(population_size,generations,tournament_size,elite_percent,mate_percent,mutation_percent,starting_generation_descriptor_dir,output_dir)
     
     print 
-    print 'Total Run Time: '+str(time.time()-start_time)
+    print 'Total Run Time: '+str(time.time()-START_TIME)
     print 
 
 if __name__ == '__main__':
