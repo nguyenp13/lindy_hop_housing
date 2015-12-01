@@ -13,6 +13,9 @@ import matplotlib.pyplot
 UNIQUE_IDENTIFIER_COUNTER = 0
 inf = float('inf')
 
+def join_paths(l):
+    return reduce(os.path.join,l)
+
 def list_dir_abs(basepath):
     return map(lambda x: os.path.abspath(os.path.join(basepath, x)), os.listdir(basepath))
 

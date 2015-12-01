@@ -5,7 +5,6 @@ TODO:
     Very Important
         fix scaling of images
             make sure the scaling is correct by checking actual numbers
-        save text files of the actual numbers
         put max p adn max n in the title
         add little somewhat visible grid lines in the graphs
         Get parallel GA runs to be multiplatform
@@ -63,16 +62,18 @@ import matplotlib.pyplot
 from util import *
 
 START_TIME=time.time()
+
 SAVE_VISUALIZATIONS = True
+NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS=1
 VISUALIZATION_MIN_X=0
 VISUALIZATION_MIN_Y=0
-VISUALIZATION_MAX_X=0.016
-VISUALIZATION_MAX_Y=0.030
+VISUALIZATION_MAX_X=100
+VISUALIZATION_MAX_Y=100
 
 DEFAULT_NUM_DUMMY_HOSTS = 100
 DEFAULT_NUM_DUMMY_GUESTS = 100
 
-POPULATION_SIZE_DEFAULT_VALUE = 25
+POPULATION_SIZE_DEFAULT_VALUE = 5
 GENERATIONS_DEFAULT_VALUE = 50
 TOURNAMENT_SIZE_DEFAULT_VALUE = 8
 ELITE_PERCENT_DFAULT_VALUE = 50
@@ -371,71 +372,74 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
     num_mutated = int(round(mutation_percent*population_size))
     
     if SAVE_VISUALIZATIONS:
-        makedirs(os.path.join(output_dir,'all_generations_point_cloud'))
-        makedirs(os.path.join(output_dir,'point_cloud'))
-        makedirs(os.path.join(output_dir,'pareto_curves'))
-        makedirs(os.path.join(output_dir,'global_pareto_curve'))
+        makedirs(join_paths([output_dir,'all_generations_point_cloud']))
+        makedirs(join_paths([output_dir,'point_cloud']))
+        makedirs(join_paths([output_dir,'pareto_curves']))
+        makedirs(join_paths([output_dir,'global_pareto_curve']))
+        makedirs(join_paths([output_dir,'global_pareto_frontier_scores_csv']))
+        makedirs(join_paths([output_dir,'all_scores_per_generation_csv']))
+        makedirs(join_paths([output_dir,'pareto_frontier_scores_per_generation_csv']))
+        makedirs(join_paths([output_dir,'population_data']))
         fig_all_points, subplot_all_points = matplotlib.pyplot.subplots()
+        subplot_all_points.grid(True)
         subplot_all_points.set_xlabel('N Values')
         subplot_all_points.set_ylabel('P Values')
-#        subplot_all_points.set_xlim(left=0, right=VISUALIZATION_MAX_X)
-#        subplot_all_points.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
-        subplot_all_points.invert_xaxis()
-        subplot_all_points.invert_yaxis()
+        subplot_all_points.set_xlim(left=VISUALIZATION_MIN_X, right=VISUALIZATION_MAX_X)
+        subplot_all_points.set_ylim(bottom=VISUALIZATION_MIN_Y, top=VISUALIZATION_MAX_Y)
+#        subplot_all_points.invert_xaxis()
+#        subplot_all_points.invert_yaxis()
         fig_global_pareto_curve, subplot_global_pareto_curve = matplotlib.pyplot.subplots()
+        subplot_global_pareto_curve.grid(True)
         subplot_global_pareto_curve.set_xlabel('N Values')
         subplot_global_pareto_curve.set_ylabel('P Values')
-#        subplot_global_pareto_curve.set_xlim(left=0, right=VISUALIZATION_MAX_X)
-#        subplot_global_pareto_curve.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
-        subplot_global_pareto_curve.invert_xaxis()
-        subplot_global_pareto_curve.invert_yaxis()
+        subplot_global_pareto_curve.set_xlim(left=VISUALIZATION_MIN_X, right=VISUALIZATION_MAX_X)
+        subplot_global_pareto_curve.set_ylim(bottom=VISUALIZATION_MIN_Y, top=VISUALIZATION_MAX_Y)
+#        subplot_global_pareto_curve.invert_xaxis()
+#        subplot_global_pareto_curve.invert_yaxis()
     for generation in xrange(generations):
-        SAVE_VISUALIZATIONS=(generation%5==0)
+        SAVE_VISUALIZATIONS=(generation%NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS==0)
         print "%-30s Elapsed Time: %015f" % ("Working on generation "+str(generation)+'.',time.time()-START_TIME)
         
         # Save the population
-        with open(os.path.join(os.path.abspath(output_dir),'generation_%03d.py'%generation),'w') as f:
+        with open(join_paths([os.path.abspath(output_dir),'population_data','generation_%03d.py'%generation]),'w') as f:
             f.write('genomes='+genomes.__repr__())
         
         # Evaluate each population member
         inverse_N_P_scores = sorted([(index, 1.0/(1+genome.get_N_value()), 1.0/(1+genome.get_P_value())) for index,genome in enumerate(genomes)], key=lambda x:x[1]) # sorted from lowest to highest 1/N values
-        # Save visualizations
+        xy = sorted(list(set([e[1:3] for e in inverse_N_P_scores])),key=lambda e:(e[0],-e[1]))
+        x = [1.0/e[0]-1 for e in xy] # N values
+        y = [1.0/e[1]-1 for e in xy] # P values
+        with open(join_paths([os.path.abspath(output_dir),'all_scores_per_generation_csv','generation_%03d.csv'%generation]),'w') as f:
+            f.write('N, P\n')
+            for n,p in zip(x,y):
+                f.write(str(int(n))+', '+str(int(p))+'\n')
         if SAVE_VISUALIZATIONS:
-            xy = list(set([e[1:3] for e in inverse_N_P_scores]))
-            x = [1.0/e[0]-1 for e in xy] # N values
-            y = [1.0/e[1]-1 for e in xy] # P values
 #            x = [e[0] for e in xy] # N values
 #            y = [e[1] for e in xy] # P values
             #Save point clouds over all generations visualization
             subplot_all_points.set_title('Generation '+str(generation))
-#            subplot_all_points.set_xticks(X_TICK_VALUES)
-#            subplot_all_points.set_yticks(Y_TICK_VALUES)
-#            subplot_all_points.set_xticklabels(X_TICK_LABELS)
-#            subplot_all_points.set_yticklabels(Y_TICK_LABELS)
             subplot_all_points.scatter(x, y, zorder=10, c='c', alpha=0.10)
-            fig_all_points.savefig(os.path.join(output_dir,'all_generations_point_cloud/generation_%03d.png'%generation))
+            fig_all_points.savefig(join_paths([output_dir,'all_generations_point_cloud','generation_%03d.png'%generation]))
             # Save only this generation point cloud visualization
             fig, subplot = matplotlib.pyplot.subplots()
+            subplot.grid(True)
             subplot.set_title('Generation '+str(generation))
-#            subplot.set_xticks(X_TICK_VALUES)
-#            subplot.set_yticks(Y_TICK_VALUES)
-#            subplot.set_xticklabels(X_TICK_LABELS)
-#            subplot.set_yticklabels(Y_TICK_LABELS)
             subplot.set_xlabel('N Values')
             subplot.set_ylabel('P Values')
-#            subplot.set_xlim(left=0, right=VISUALIZATION_MAX_X)
-#            subplot.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
-            subplot.invert_xaxis()
-            subplot.invert_yaxis()
+            subplot.set_xlim(left=VISUALIZATION_MIN_X, right=VISUALIZATION_MAX_X)
+            subplot.set_ylim(bottom=VISUALIZATION_MIN_Y, top=VISUALIZATION_MAX_Y)
+#            subplot.invert_xaxis()
+#            subplot.invert_yaxis()
             subplot.scatter(x, y, zorder=10, c='r', alpha=1.0)
-            fig.savefig(os.path.join(output_dir,'point_cloud/generation_%03d.png'%generation))
+            fig.savefig(join_paths([output_dir,'point_cloud','generation_%03d.png'%generation]))
             matplotlib.pyplot.close(fig)
         # Get pareto ranking by N and P values
         pareto_ranking = [] 
         if SAVE_VISUALIZATIONS:
             fig_pareto_curves, subplot_pareto_curves = matplotlib.pyplot.subplots()
-            subplot_pareto_curves.invert_xaxis()
-            subplot_pareto_curves.invert_yaxis()
+            subplot_pareto_curves.grid(True)
+#            subplot_pareto_curves.invert_xaxis()
+#            subplot_pareto_curves.invert_yaxis()
         for pareto_rank_score in xrange(len(inverse_N_P_scores)): # the number of pareto rank values is upper bounded by the number of points as they all may fall on different pareto curves (imagine if they all lied on the f(x)=x line). 
             indices_to_pop=[]
             prev_inverse_P_score = inf
@@ -464,12 +468,14 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
                     genome = genomes[elem[0]] if type(elem[0])==int else elem[0]
                     assertion(isinstance(genome,Genome),"genome is not an instance of the class Genome.")
                     global_pareto_frontier.append((genome,inverse_N_score,inverse_P_score))
+                with open(join_paths([os.path.abspath(output_dir),'pareto_frontier_scores_per_generation_csv','pareto_frontier_at_generation_%03d.csv'%generation]),'w') as f:
+                    f.write('N, P\n')
+                    for (_, _, inverse_N_score, inverse_P_score) in pareto_ranking:
+                        n = 1.0/inverse_N_score-1
+                        p = 1.0/inverse_P_score-1
+                        f.write(str(int(n))+', '+str(int(p))+'\n')
             if SAVE_VISUALIZATIONS:
                 subplot_global_pareto_curve.set_title('Generation '+str(generation))
-#                subplot_global_pareto_curve.set_xticklabels(X_TICK_VALUES)
-#                subplot_global_pareto_curve.set_yticklabels(Y_TICK_VALUES)
-#                subplot_global_pareto_curve.set_xticklabels(X_TICK_LABELS)
-#                subplot_global_pareto_curve.set_yticklabels(Y_TICK_LABELS)
                 xy = sorted(list(set([(inverse_N_score,inverse_P_score) for (genome,inverse_N_score,inverse_P_score) in global_pareto_frontier])), key=lambda e:(e[0],-e[1]))
                 x = [1.0/e[0]-1 for e in xy] # N values
                 y = [1.0/e[1]-1 for e in xy] # P values
@@ -478,16 +484,12 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
                 color=numpy.random.rand(3,1)
                 subplot_global_pareto_curve.plot(x, y, zorder=10, c=color, alpha=1.0)
                 subplot_global_pareto_curve.scatter(x, y, zorder=10, c=color, alpha=1.0)
-                fig_global_pareto_curve.savefig(os.path.join(output_dir,'global_pareto_curve/generation_%03d.png'%generation))
+                fig_global_pareto_curve.savefig(join_paths([output_dir,'global_pareto_curve','generation_%03d.png'%generation]))
                 subplot_pareto_curves.set_title('Generation '+str(generation))
-#                subplot_pareto_curves.set_xticklabels(X_TICK_VALUES)
-#                subplot_pareto_curves.set_yticklabels(Y_TICK_VALUES)
-#                subplot_pareto_curves.set_xticklabels(X_TICK_LABELS)
-#                subplot_pareto_curves.set_yticklabels(Y_TICK_LABELS)
                 subplot_pareto_curves.set_xlabel('N Values')
                 subplot_pareto_curves.set_ylabel('P Values')
-#                subplot_pareto_curves.set_xlim(left=0, right=VISUALIZATION_MAX_X)
-#                subplot_pareto_curves.set_ylim(bottom=0, top=VISUALIZATION_MAX_Y)
+                subplot_pareto_curves.set_xlim(left=VISUALIZATION_MIN_X, right=VISUALIZATION_MAX_X)
+                subplot_pareto_curves.set_ylim(bottom=VISUALIZATION_MIN_Y, top=VISUALIZATION_MAX_Y)
                 xy = sorted(list(set([inverse_N_P_scores[i][1:3] for i in indices_to_pop])), key=lambda e:(e[0],-e[1]))
                 x = [1.0/e[0]-1 for e in xy] # N values
                 y = [1.0/e[1]-1 for e in xy] # P values
@@ -501,7 +503,7 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
             if len(inverse_N_P_scores)==0:
                 break
         if SAVE_VISUALIZATIONS:
-            fig_pareto_curves.savefig(os.path.join(output_dir,'pareto_curves/generation_%03d.png'%generation))
+            fig_pareto_curves.savefig(join_paths([output_dir,'pareto_curves','generation_%03d.png'%generation]))
             matplotlib.pyplot.close(fig_pareto_curves)
         assertion(len(inverse_N_P_scores)==0, "inverse_N_P_scores is not empty after pareto rank determination (all values should've been popped out of it.")
         # Tournament selection for the elites
@@ -531,9 +533,13 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
         genomes=genomes[:population_size]
         assertion(len(genomes)==population_size,"len(genomes) is not equal to population_size.")
         # Save global_pareto_frontier
-        with open(os.path.join(os.path.abspath(output_dir),'global_pareto_frontier.py'),'w') as f:
+        with open(join_paths([os.path.abspath(output_dir),'global_pareto_frontier.py']),'w') as f:
             # We want to save this on every generation in case the running stops for any reason ebfore we've reached our final generation.
             f.write('genomes='+([e[0] for e in global_pareto_frontier]).__repr__())
+        with open(join_paths([os.path.abspath(output_dir),'global_pareto_frontier_scores_csv','global_pareto_frontier_at_generation_%03d.csv'%generation]),'w') as f:
+            f.write('N, P\n')
+            for (_,inverse_n,inverse_p) in global_pareto_frontier:
+                f.write(str(int(1.0/inverse_n-1))+', '+str(int(1.0/inverse_p-1))+'\n')
         
     if SAVE_VISUALIZATIONS:
         matplotlib.pyplot.close(fig_all_points)
@@ -609,7 +615,7 @@ def main():
     print 
     
     # Save host and guest data
-    with open(os.path.join(os.path.abspath(output_dir),'data.py'),'w') as f:
+    with open(join_paths([os.path.abspath(output_dir),'data.py']),'w') as f:
         f.write('hosts='+hosts.__repr__())
         f.write('\n')
         f.write('guests='+guests.__repr__())
