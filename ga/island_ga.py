@@ -73,6 +73,7 @@ def main():
     print "    output_dir:", output_dir
     print 
     
+    makedirs(output_dir)
     sys.stdout = open(os.devnull, 'w') # Temporarily suppress output
     ga.initialize_guest_and_host_data(output_dir) # Make sure these host and guest variables are initialized so that the Genome.get_N_value() and Genome.get_P_value() methods work
     sys.stdout = sys.__stdout__ # Restore output
@@ -100,6 +101,7 @@ def main():
         makedirs(iteration_output_dir)
         for island_index,d in enumerate(result_dirs_list):
             shutil.copy(join_paths([d,'global_pareto_frontier.py']),join_paths([iteration_output_dir,'island_'+str(island_index)+'_global_pareto_frontier.py']))
+        shutil.copy(join_paths([os.path.abspath(output_dir),'genome_data','island_global_pareto_frontier.py']),iteration_output_dir)
         starting_generation_descriptor = iteration_output_dir
         # Save visualizations
         genomes=[]
@@ -120,8 +122,11 @@ def main():
             indices_to_avoid.append(i)
         for i in indices_to_avoid[::-1]:
             genomes.pop(i)
-        with open(join_paths([os.path.abspath(output_dir),'genome_data','iteration_'+str(island_processing_iteration)+'.py']),'w') as f:
-            f.write('genomes='+[e[0] for e in genomes].__repr__())
+        with open(join_paths([os.path.abspath(output_dir),'genome_data','iteration_'+str(island_processing_iteration)+'.py']),'w') as f1:
+            with open(join_paths([os.path.abspath(output_dir),'genome_data','island_global_pareto_frontier.py']),'w') as f2:
+                text='genomes='+[e[0] for e in genomes].__repr__()
+                f1.write(text)
+                f2.write(text)
         genomes=[(e[0], 1/e[1]-1, 1/e[2]-1) for e in genomes]
         # Save visualization and data
         with open(join_paths([os.path.abspath(output_dir),'N_P_data_csv','iteration_'+str(island_processing_iteration)+'.csv']),'w') as f:
@@ -136,8 +141,6 @@ def main():
         subplot.scatter(x, y, zorder=10, c=color, alpha=1.0)
         ga.add_upper_left_text_box(subplot, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
         fig.savefig(join_paths([output_dir,'graphs','iteration_'+str(island_processing_iteration)+'.png']))
-    subplot.set_title('Final Result')
-    fig.savefig(join_paths([output_dir,'graphs','final_result.png']))
     matplotlib.pyplot.close(fig)
     
     print 
