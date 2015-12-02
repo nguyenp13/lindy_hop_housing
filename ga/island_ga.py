@@ -3,7 +3,7 @@
 '''
 
 TODO:
-    Test this to make sure everything works
+    Save visualizations along the way
 
 '''
 
@@ -77,7 +77,15 @@ def main():
     print "    output_dir:", output_dir
     print 
     
+    sys.stdout = open(os.devnull, 'w') # Temporarily suppress output
+    ga.initialize_guest_and_host_data(output_dir) # Make sure these host and guest variables are initialized so that the Genome.get_N_value() and Genome.get_P_value() methods work
+    sys.stdout = sys.__stdout__ # Restore output
+    fig, subplot = ga.get_subplots()
     temp_dir = join_paths([output_dir,'island_ga_temp'])
+    makedirs(temp_dir)
+    makedirs(join_paths([os.path.abspath(output_dir),'N_P_data_csv']))
+    makedirs(join_paths([os.path.abspath(output_dir),'genome_data']))
+    makedirs(join_paths([os.path.abspath(output_dir),'graphs']))
     makedirs(temp_dir)
     starting_generation_descriptor_dir=starting_generation_descriptor_dir0
     for island_processing_iteration in xrange(num_inter_island_combinations):
@@ -97,44 +105,43 @@ def main():
         for island_index,d in enumerate(result_dirs_list):
             shutil.copy(join_paths([d,'global_pareto_frontier.py']),join_paths([iteration_output_dir,'island_'+str(island_index)+'_global_pareto_frontier.py']))
         starting_generation_descriptor = iteration_output_dir
-    sys.stdout = open(os.devnull, 'w') # Temporarily suppress output
-    ga.initialize_guest_and_host_data(output_dir)
-    sys.stdout = sys.__stdout__ # Restore output
-    genomes=[]
-    for file_name in list_dir_abs(starting_generation_descriptor):
-        line = open(file_name,'r').readlines()[0].replace('Genome(','ga.Genome(')
-        d = dict()
-        exec line in globals(), d
-        genomes+=d['genomes']
-    # Get final pareto frontier
-    genomes=[(genome, 1/(1.0+genome.get_N_value()), 1/(1.0+genome.get_P_value())) for genome in genomes]
-    genomes=sorted(genomes, key=lambda x:(x[1],-x[2])) #sorted by lowest to highest inverse N, then by highest to lowest inverse P
-    prev_inverse_P=inf
-    indices_to_avoid=[]
-    for i,(genome, inverse_N, inverse_P) in enumerate(genomes):
-        if inverse_P<=prev_inverse_P:
-            prev_inverse_P=inverse_P
-            continue
-        indices_to_avoid.append(i)
-    for i in indices_to_avoid[::-1]:
-        genomes.pop(i)
-    with open(join_paths([os.path.abspath(output_dir),'final_result.py']),'w') as f:
-        f.write('genomes='+[e[0] for e in genomes].__repr__())
-    genomes=[(e[0], 1/e[1]-1, 1/e[2]-1) for e in genomes]
-    # Save visualization and data
-    with open(join_paths([os.path.abspath(output_dir),'final_result.csv']),'w') as f:
-        f.write('N, P\n')
-        for _,n,p in genomes:
-            f.write(str(int(n))+', '+str(int(p))+'\n')
-    fig, subplot = ga.get_subplots()
-    subplot.set_title('Island GA Final Result')
-    x = [int(e[1]) for e in genomes] # N values
-    y = [int(e[2]) for e in genomes] # P values
-    color=numpy.random.rand(3,1)
-    subplot.plot(x, y, zorder=10, c=color, alpha=1.0)
-    subplot.scatter(x, y, zorder=10, c=color, alpha=1.0)
-    ga.add_upper_left_text_box(subplot, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
-    fig.savefig(join_paths([output_dir,'final_result.png']))
+        # Save visualizations
+        genomes=[]
+        for file_name in list_dir_abs(starting_generation_descriptor):
+            line = open(file_name,'r').readlines()[0].replace('Genome(','ga.Genome(')
+            d = dict()
+            exec line in globals(), d
+            genomes+=d['genomes']
+        # Get final pareto frontier
+        genomes=[(genome, 1/(1.0+genome.get_N_value()), 1/(1.0+genome.get_P_value())) for genome in genomes]
+        genomes=sorted(genomes, key=lambda x:(x[1],-x[2])) #sorted by lowest to highest inverse N, then by highest to lowest inverse P
+        prev_inverse_P=inf
+        indices_to_avoid=[]
+        for i,(genome, inverse_N, inverse_P) in enumerate(genomes):
+            if inverse_P<=prev_inverse_P:
+                prev_inverse_P=inverse_P
+                continue
+            indices_to_avoid.append(i)
+        for i in indices_to_avoid[::-1]:
+            genomes.pop(i)
+        with open(join_paths([os.path.abspath(output_dir),'genome_data','iteration_'+str(island_processing_iteration)+'.py']),'w') as f:
+            f.write('genomes='+[e[0] for e in genomes].__repr__())
+        genomes=[(e[0], 1/e[1]-1, 1/e[2]-1) for e in genomes]
+        # Save visualization and data
+        with open(join_paths([os.path.abspath(output_dir),'N_P_data_csv','iteration_'+str(island_processing_iteration)+'.csv']),'w') as f:
+            f.write('N, P\n')
+            for _,n,p in genomes:
+                f.write(str(int(n))+', '+str(int(p))+'\n')
+        subplot.set_title('Island GA Iteration '+str(island_processing_iteration))
+        x = [int(e[1]) for e in genomes] # N values
+        y = [int(e[2]) for e in genomes] # P values
+        color=numpy.random.rand(3,1)
+        subplot.plot(x, y, zorder=10, c=color, alpha=1.0)
+        subplot.scatter(x, y, zorder=10, c=color, alpha=1.0)
+        ga.add_upper_left_text_box(subplot, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
+        fig.savefig(join_paths([output_dir,'graphs','iteration_'+str(island_processing_iteration)+'.png']))
+    fig.savefig(join_paths([output_dir,'graphs','final_result.png']))
+    matplotlib.pyplot.close(fig)
     
     print 
     print 'Total Run Time: '+str(time.time()-start_time)
