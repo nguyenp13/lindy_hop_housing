@@ -4,6 +4,7 @@
 TODO:
     Very Important
         Get parallel GA runs to be multiplatform
+            finish island_ga.py
     
     Less Important
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
@@ -59,7 +60,7 @@ from util import *
 START_TIME=time.time()
 
 SAVE_VISUALIZATIONS = True
-NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS=5
+NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS=1
 VISUALIZATION_MIN_X=0
 VISUALIZATION_MIN_Y=0
 VISUALIZATION_MAX_X=100
@@ -68,8 +69,8 @@ VISUALIZATION_MAX_Y=100
 DEFAULT_NUM_DUMMY_HOSTS = 100
 DEFAULT_NUM_DUMMY_GUESTS = 100
 
-POPULATION_SIZE_DEFAULT_VALUE = 25
-GENERATIONS_DEFAULT_VALUE = 500
+POPULATION_SIZE_DEFAULT_VALUE = 100
+GENERATIONS_DEFAULT_VALUE = 5000
 TOURNAMENT_SIZE_DEFAULT_VALUE = 8
 ELITE_PERCENT_DFAULT_VALUE = 50
 MATE_PERCENT_DEFAULT_VALUE = 30
@@ -80,6 +81,35 @@ OUTPUT_DIR_DEFAULT_VALUE = './output'
 housing_graph = None
 hosts = [] 
 guests = []
+
+def initialize_guest_and_host_data(output_dir):
+    global housing_graph, hosts, guests
+    
+    # Add hosts and guests
+    hosts, guests = generate_dummy_hosts_and_guests()
+    print "Number of Host Spots:", len(hosts)
+    print "Number of Guests:", len(guests)
+    print 
+    
+    # Save host and guest data
+    with open(join_paths([os.path.abspath(output_dir),'data.py']),'w') as f:
+        f.write('hosts='+hosts.__repr__())
+        f.write('\n')
+        f.write('guests='+guests.__repr__())
+    
+    # Create Graph
+    housing_graph = networkx.Graph()
+    
+    for host in hosts:
+        housing_graph.add_node(host.id_num)
+    for guest in guests:
+        housing_graph.add_node(guest.id_num)
+    
+    for host in hosts:
+        for guest in guests:
+            if are_compatible(host, guest):
+                housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
+    
 
 def add_upper_left_text_box(subplot, text):
     subplot.text(x=0.04, y=0.96, s=text, horizontalalignment='left', verticalalignment='top', transform=subplot.transAxes, bbox=dict(boxstyle='round', facecolor='wheat', alpha=1.0))
@@ -563,8 +593,6 @@ def usage():
 
 def main():
     
-    global housing_graph, hosts, guests
-    
     os.system('clear') 
     
     if len(sys.argv) < 1 or '-usage' in sys.argv: 
@@ -592,30 +620,7 @@ def main():
     print "    output_dir:", output_dir
     print 
     
-    # Add hosts and guests
-    hosts, guests = generate_dummy_hosts_and_guests()
-    print "Number of Host Spots:", len(hosts)
-    print "Number of Guests:", len(guests)
-    print 
-    
-    # Save host and guest data
-    with open(join_paths([os.path.abspath(output_dir),'data.py']),'w') as f:
-        f.write('hosts='+hosts.__repr__())
-        f.write('\n')
-        f.write('guests='+guests.__repr__())
-    
-    # Create Graph
-    housing_graph = networkx.Graph()
-    
-    for host in hosts:
-        housing_graph.add_node(host.id_num)
-    for guest in guests:
-        housing_graph.add_node(guest.id_num)
-    
-    for host in hosts:
-        for guest in guests:
-            if are_compatible(host, guest):
-                housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
+    initialize_guest_and_host_data(output_dir)
     
     ga(population_size,generations,tournament_size,elite_percent,mate_percent,mutation_percent,starting_generation_descriptor_dir,output_dir)
     
@@ -625,5 +630,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
