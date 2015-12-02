@@ -592,8 +592,7 @@ def usage():
     sys.exit(1) 
 
 def main():
-    
-    os.system('clear') 
+    print '\n'*100 # Clear
     
     if len(sys.argv) < 1 or '-usage' in sys.argv: 
         usage()

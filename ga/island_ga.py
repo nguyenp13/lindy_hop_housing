@@ -1,12 +1,5 @@
 #!/usr/bin/python
 
-'''
-
-TODO:
-    Save visualizations along the way
-
-'''
-
 import os
 import shutil
 import sys
@@ -22,13 +15,15 @@ NUM_INTER_ISLAND_COMBINATIONS=400
 
 GENERATIONS_PER_ITERATION_DEFAULT_VALUE=25
 
+all_child_subprocesses = []
+
 def run_parallel_commands_silently(command_list):
-    child_processes = []
+    global all_child_subprocesses
     for command in command_list:
-        child = subprocess.Popen(command,stdin=None,stdout=open(os.devnull, 'w'), shell=True)
-        child_processes.append(child)
-    for child in child_processes:
-        child.wait()
+        all_child_subprocesses.append(subprocess.Popen(command,stdin=None,stdout=open(os.devnull, 'w'), shell=True))
+    for i in xrange(len(command_list)):
+        all_child_subprocesses[-1].wait()
+        all_child_subprocesses.pop()
 
 def usage():
     print >> sys.stderr, 'Usage of '+__file__+' is the similar to that of ga.py. '+__file__+' has some additional options.'
@@ -48,8 +43,7 @@ def usage():
     ga.usage()
 
 def main():
-    os.system('clear') 
-    
+    print '\n'*100 # Clear
     start_time=time.time()
     
     if len(sys.argv) < 1 or '-usage' in sys.argv: 
@@ -150,5 +144,9 @@ def main():
     print 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    finally:
+        for child in all_child_subprocesses:
+            child.kill()
 
