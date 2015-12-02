@@ -136,6 +136,7 @@ def main():
         subplot.scatter(x, y, zorder=10, c=color, alpha=1.0)
         ga.add_upper_left_text_box(subplot, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
         fig.savefig(join_paths([output_dir,'graphs','iteration_'+str(island_processing_iteration)+'.png']))
+    subplot.set_title('Final Result')
     fig.savefig(join_paths([output_dir,'graphs','final_result.png']))
     matplotlib.pyplot.close(fig)
     
