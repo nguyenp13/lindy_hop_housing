@@ -13,21 +13,20 @@ import sys
 import pdb
 import ga
 import subprocess
+import time
+import numpy
 from util import *
 
 NUM_ISLANDS_DEFAULT_VALUE=4
 NUM_INTER_ISLAND_COMBINATIONS=4
 
 def run_parallel_commands_silently(command_list):
-    if sys.platform == 'win32':
-        assertion(False, "Windows is not supported.")
-    if os.name=='posix': # We just want to check that it's some POSIX conforming OS as the bash commands we will use here will likely work on other POSIX conforming platforms. We don't care to check which specific flavor of linux or whatever OS we're working on
-        child_processes = []
-        for command in command_list:
-            child = subprocess.Popen('(('+command+') > /dev/null 2>&1)',stdin=None,stdout=None, shell=True)
-            child_processes.append(child)
-        for child in child_processes:
-            child.wait()
+    child_processes = []
+    for command in command_list:
+        child = subprocess.Popen(command,stdin=None,stdout=open(os.devnull, 'w'), shell=True)
+        child_processes.append(child)
+    for child in child_processes:
+        child.wait()
 
 def usage():
     print >> sys.stderr, 'Usage of '+__file__+' is the similar to that of ga.py. '+__file__+' has some additional options.'
@@ -48,6 +47,8 @@ def usage():
 
 def main():
     os.system('clear') 
+    
+    start_time=time.time()
     
     if len(sys.argv) < 1 or '-usage' in sys.argv: 
         usage()
@@ -80,6 +81,7 @@ def main():
     makedirs(temp_dir)
     starting_generation_descriptor_dir=starting_generation_descriptor_dir0
     for island_processing_iteration in xrange(num_inter_island_combinations):
+        print "Working on island iteration %d." % island_processing_iteration
         result_dirs_list = []
         command_list = []
         info_tuple = (population_size, generations, tournament_size, elite_percent, mate_percent, mutation_percent, starting_generation_descriptor_dir)
@@ -89,20 +91,22 @@ def main():
             result_dirs_list.append(island_output_dir_name)
             command = ('python ga.py -population_size %d -generations %d -tournament_size %d -elite_percent %f -mate_percent %f -mutation_percent %f -starting_generation_descriptor_dir %s -output_dir '+island_output_dir_name) % info_tuple
             command_list.append(command)
-#        pdb.set_trace() #######################################
         run_parallel_commands_silently(command_list)
         iteration_output_dir = join_paths([temp_dir,'combined_results_[iteration:'+str(island_processing_iteration)+']'])
         makedirs(iteration_output_dir)
         for island_index,d in enumerate(result_dirs_list):
             shutil.copy(join_paths([d,'global_pareto_frontier.py']),join_paths([iteration_output_dir,'island_'+str(island_index)+'_global_pareto_frontier.py']))
         starting_generation_descriptor = iteration_output_dir
+    sys.stdout = open(os.devnull, 'w') # Temporarily suppress output
     ga.initialize_guest_and_host_data(output_dir)
+    sys.stdout = sys.__stdout__ # Restore output
     genomes=[]
-    for file_name in starting_generation_descriptor:
+    for file_name in list_dir_abs(starting_generation_descriptor):
         line = open(file_name,'r').readlines()[0].replace('Genome(','ga.Genome(')
         d = dict()
         exec line in globals(), d
         genomes+=d['genomes']
+    # Get final pareto frontier
     genomes=[(genome, 1/(1.0+genome.get_N_value()), 1/(1.0+genome.get_P_value())) for genome in genomes]
     genomes=sorted(genomes, key=lambda x:(x[1],-x[2])) #sorted by lowest to highest inverse N, then by highest to lowest inverse P
     prev_inverse_P=inf
@@ -117,19 +121,24 @@ def main():
     with open(join_paths([os.path.abspath(output_dir),'final_result.py']),'w') as f:
         f.write('genomes='+[e[0] for e in genomes].__repr__())
     genomes=[(e[0], 1/e[1]-1, 1/e[2]-1) for e in genomes]
+    # Save visualization and data
     with open(join_paths([os.path.abspath(output_dir),'final_result.csv']),'w') as f:
         f.write('N, P\n')
         for _,n,p in genomes:
             f.write(str(int(n))+', '+str(int(p))+'\n')
-    fig, subplot = get_subplots()
+    fig, subplot = ga.get_subplots()
     subplot.set_title('Island GA Final Result')
-    x = [int(e[0]) for e in genomes] # N values
-    y = [int(e[1]) for e in genomes] # P values
+    x = [int(e[1]) for e in genomes] # N values
+    y = [int(e[2]) for e in genomes] # P values
     color=numpy.random.rand(3,1)
     subplot.plot(x, y, zorder=10, c=color, alpha=1.0)
     subplot.scatter(x, y, zorder=10, c=color, alpha=1.0)
     ga.add_upper_left_text_box(subplot, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
     fig.savefig(join_paths([output_dir,'final_result.png']))
+    
+    print 
+    print 'Total Run Time: '+str(time.time()-start_time)
+    print 
 
 if __name__ == '__main__':
     main()

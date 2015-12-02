@@ -119,7 +119,7 @@ def get_subplots():
     subplot.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator())
     subplot.yaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator())
     subplot.grid(True, which='major', linestyle='-', alpha=0.4)
-    subplot.grid(True, which='minor', linestyle='-', alpha=0.1)
+    subplot.grid(True, which='minor', linestyle='-', alpha=0.2)
     subplot.set_xlabel('N Values')
     subplot.set_ylabel('P Values')
     subplot.set_xlim(left=VISUALIZATION_MIN_X, right=VISUALIZATION_MAX_X)
