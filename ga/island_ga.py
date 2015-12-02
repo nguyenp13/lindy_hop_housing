@@ -101,7 +101,8 @@ def main():
         makedirs(iteration_output_dir)
         for island_index,d in enumerate(result_dirs_list):
             shutil.copy(join_paths([d,'global_pareto_frontier.py']),join_paths([iteration_output_dir,'island_'+str(island_index)+'_global_pareto_frontier.py']))
-        shutil.copy(join_paths([os.path.abspath(output_dir),'genome_data','island_global_pareto_frontier.py']),iteration_output_dir)
+        if island_processing_iteration>0:
+            shutil.copy(join_paths([os.path.abspath(output_dir),'genome_data','island_global_pareto_frontier.py']),iteration_output_dir)
         starting_generation_descriptor = iteration_output_dir
         # Save visualizations
         genomes=[]
