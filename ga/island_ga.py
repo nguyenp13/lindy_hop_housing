@@ -17,8 +17,10 @@ import time
 import numpy
 from util import *
 
-NUM_ISLANDS_DEFAULT_VALUE=4
-NUM_INTER_ISLAND_COMBINATIONS=4
+NUM_ISLANDS_DEFAULT_VALUE=8
+NUM_INTER_ISLAND_COMBINATIONS=400
+
+GENERATIONS_PER_ITERATION_DEFAULT_VALUE=25
 
 def run_parallel_commands_silently(command_list):
     child_processes = []
@@ -54,7 +56,7 @@ def main():
         usage()
     
     population_size = int(get_command_line_param_val_default_value(sys.argv, '-population_size', ga.POPULATION_SIZE_DEFAULT_VALUE))
-    generations = int(get_command_line_param_val_default_value(sys.argv, '-generations', ga.GENERATIONS_DEFAULT_VALUE))
+    generations = int(get_command_line_param_val_default_value(sys.argv, '-generations', GENERATIONS_PER_ITERATION_DEFAULT_VALUE))
     tournament_size = int(get_command_line_param_val_default_value(sys.argv, '-tournament_size', ga.TOURNAMENT_SIZE_DEFAULT_VALUE))
     elite_percent = float(get_command_line_param_val_default_value(sys.argv, '-elite_percent', ga.ELITE_PERCENT_DFAULT_VALUE))
     mate_percent = float(get_command_line_param_val_default_value(sys.argv, '-mate_percent', ga.MATE_PERCENT_DEFAULT_VALUE))
