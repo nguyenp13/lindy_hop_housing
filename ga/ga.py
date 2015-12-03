@@ -3,10 +3,9 @@
 '''
 TODO:
     Very Important
-        Get parallel GA runs to be multiplatform
-            finish island_ga.py
     
     Less Important
+        Get script working to run island_ga.py on https://cloud.sagemath.com/ 
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
             See how this works with real data
         Refactor each section of the main GA code into functions
