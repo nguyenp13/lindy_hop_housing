@@ -91,16 +91,16 @@ def main():
         command_list = []
         info_tuple = (population_size, generations, tournament_size, elite_percent, mate_percent, mutation_percent, starting_generation_descriptor_dir)
         for island_index in xrange(num_islands):
-            island_output_dir_name = join_paths([temp_dir,'output_[iteration:'+str(island_processing_iteration)+'][island_index:'+str(island_index)+']'])
+            island_output_dir_name = join_paths([temp_dir,)'output_[iteration:%03d][island_index:%03d]'%(island_processing_iteration,island_index))])
             makedirs(island_output_dir_name)
             result_dirs_list.append(island_output_dir_name)
             command = ('python ga.py -population_size %d -generations %d -tournament_size %d -elite_percent %f -mate_percent %f -mutation_percent %f -starting_generation_descriptor_dir %s -output_dir '+island_output_dir_name) % info_tuple
             command_list.append(command)
         run_parallel_commands_silently(command_list)
-        iteration_output_dir = join_paths([temp_dir,'combined_results_[iteration:'+str(island_processing_iteration)+']'])
+        iteration_output_dir = join_paths([temp_dir,('combined_results_[iteration:%03d]'%island_processing_iteration)])
         makedirs(iteration_output_dir)
         for island_index,d in enumerate(result_dirs_list):
-            shutil.copy(join_paths([d,'global_pareto_frontier.py']),join_paths([iteration_output_dir,'island_'+str(island_index)+'_global_pareto_frontier.py']))
+            shutil.copy(join_paths([d,'global_pareto_frontier.py']),join_paths([iteration_output_dir,'island_%03d_global_pareto_frontier.py'%island_index]))
         if island_processing_iteration>0:
             shutil.copy(join_paths([os.path.abspath(output_dir),'genome_data','island_global_pareto_frontier.py']),iteration_output_dir)
         starting_generation_descriptor = iteration_output_dir
@@ -123,14 +123,14 @@ def main():
             indices_to_avoid.append(i)
         for i in indices_to_avoid[::-1]:
             genomes.pop(i)
-        with open(join_paths([os.path.abspath(output_dir),'genome_data','iteration_'+str(island_processing_iteration)+'.py']),'w') as f1:
+        with open(join_paths([os.path.abspath(output_dir),'genome_data',('iteration_island_processing_iteration%03d.py'%island_processing_iteration)]),'w') as f1:
             with open(join_paths([os.path.abspath(output_dir),'genome_data','island_global_pareto_frontier.py']),'w') as f2:
                 text='genomes='+[e[0] for e in genomes].__repr__()
                 f1.write(text)
                 f2.write(text)
         genomes=[(e[0], 1/e[1]-1, 1/e[2]-1) for e in genomes]
         # Save visualization and data
-        with open(join_paths([os.path.abspath(output_dir),'N_P_data_csv','iteration_'+str(island_processing_iteration)+'.csv']),'w') as f:
+        with open(join_paths([os.path.abspath(output_dir),'N_P_data_csv',('iteration_%03d.csv'%island_processing_iteration)]),'w') as f:
             f.write('N, P\n')
             for _,n,p in genomes:
                 f.write(str(int(n))+', '+str(int(p))+'\n')
@@ -141,7 +141,7 @@ def main():
         subplot.plot(x, y, zorder=10, c=color, alpha=1.0)
         subplot.scatter(x, y, zorder=10, c=color, alpha=1.0)
         ga.add_upper_left_text_box(subplot, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
-        fig.savefig(join_paths([output_dir,'graphs','iteration_'+str(island_processing_iteration)+'.png']))
+        fig.savefig(join_paths([output_dir,'graphs',('iteration_%03d.png'%island_processing_iteration)]))
     matplotlib.pyplot.close(fig)
     
     print 
