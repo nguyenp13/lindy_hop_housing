@@ -67,8 +67,8 @@ SAVE_VISUALIZATIONS = True
 NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS=1
 VISUALIZATION_MIN_X=0
 VISUALIZATION_MIN_Y=0
-VISUALIZATION_MAX_X=100
-VISUALIZATION_MAX_Y=100
+VISUALIZATION_MAX_X=30
+VISUALIZATION_MAX_Y=30
 
 POPULATION_SIZE_DEFAULT_VALUE = 100
 GENERATIONS_DEFAULT_VALUE = 5000
@@ -490,12 +490,12 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
             if 'genomes=[Genome([(' == line[:18]: # Not very secure :/ 
                 d = dict()
                 exec line in globals(), d
-                starter_genomes_and_scores += [(genome, genome.get_N_value(), genome.get_P_value()) for genome in d['genomes']]
+                starter_genomes_and_scores += [(genome, 1/(genome.get_N_value()+1), 1/(genome.get_P_value()+1)) for genome in d['genomes']]
     starter_genomes_and_scores = sorted(starter_genomes_and_scores, key=lambda x:(x[0],-x[1])) 
     genomes = []
-    prev_P=inf # We're only starting with the pareto frontier of all the starter genomes bc there are usually too many starter genomes
-    for (genome, N, P) in starter_genomes_and_scores:
-        if P<=prev_P:
+    prev_inverse_P=inf # We're only starting with the pareto frontier of all the starter genomes bc there are usually too many starter genomes
+    for (genome, inverse_N, inverse_P) in starter_genomes_and_scores:
+        if inverse_P<=prev_inverse_P:
             genomes.append(genome)
             prev_P = P
     while len(genomes)<population_size:
@@ -551,7 +551,7 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
             indices_to_pop=[]
             prev_inverse_P_score = inf
             for i,(index_of_genome, inverse_N_score, inverse_P_score) in enumerate(sorted(inverse_N_P_scores, key=lambda e:e[1])):
-                if inverse_P_score<prev_inverse_P_score:
+                if inverse_P_score<=prev_inverse_P_score:
                     prev_inverse_P_score=inverse_P_score
                     indices_to_pop.append(i)
                     pareto_ranking.append((index_of_genome, pareto_rank_score, inverse_N_score, inverse_P_score))
@@ -568,7 +568,7 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
                 prev_inverse_P = inf
                 for i, elem in enumerate(new_global_pareto_frontier):
                     inverse_P_score=elem[-1]
-                    if inverse_P_score < prev_inverse_P:
+                    if inverse_P_score <= prev_inverse_P:
                         prev_inverse_P = inverse_P_score
                         continue
                     indices_to_avoid.append(i)
