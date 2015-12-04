@@ -7,6 +7,7 @@ import math
 import pdb
 import random
 import string
+import xlrd
 import matplotlib
 import matplotlib.pyplot
 

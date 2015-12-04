@@ -3,12 +3,17 @@
 '''
 TODO:
     Very Important
+        finish dummy host generation
     
     Less Important
+        implement feature where guests cannot be housed with smokers if they don't want to be housed with smokers
+        Take into account gender preferences when it comes to calculating P
+        Add gender preferences to Host and Guest classes
         Get script working to run island_ga.py on https://cloud.sagemath.com/ 
         Add parsing of actual data to add real hosts and guests instead of using the dummy func
             See how this works with real data
         Refactor each section of the main GA code into functions
+        Take into account late night tendencies when it comes to calculating P
 
 Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events. 
 
@@ -65,9 +70,6 @@ VISUALIZATION_MIN_Y=0
 VISUALIZATION_MAX_X=100
 VISUALIZATION_MAX_Y=100
 
-DEFAULT_NUM_DUMMY_HOSTS = 100
-DEFAULT_NUM_DUMMY_GUESTS = 100
-
 POPULATION_SIZE_DEFAULT_VALUE = 100
 GENERATIONS_DEFAULT_VALUE = 5000
 TOURNAMENT_SIZE_DEFAULT_VALUE = 16
@@ -85,7 +87,7 @@ def initialize_guest_and_host_data(output_dir):
     global housing_graph, hosts, guests
     
     # Add hosts and guests
-    hosts, guests = generate_dummy_hosts_and_guests()
+    hosts, guests = generate_hosts_and_guests()
     print "Number of Host Spots:", len(hosts)
     print "Number of Guests:", len(guests)
     print 
@@ -137,11 +139,16 @@ class Host(object):
         self.has_dogs=has_dogs0
         self.willing_to_house_smokers=willing_to_house_smokers0
         self.willing_to_provide_rides=willing_to_provide_rides0
-        self.late_night_tendencies=late_night_tendencies0 # is a string
+        self.late_night_tendencies=late_night_tendencies0 # is a string, one of "early sleeper", "some late night", or "survivors' club".
         self.preferred_house_guests=preferred_house_guests0
         self.misc_info=misc_info0 # is a string
-        self.id_num=id_num0 
+        self.id_num=id_num0 if id_num0!=-1 else generate_unique_identifier()
         assertion(len(self.days_housing_is_available)>0, 'Hosts must have at least one day of housing available.')
+    
+    def get_clone(self):
+        clone = copy.deepcopy(self)
+        clone.id_num = -1
+        return clone
     
     def __str__(self):
         ans = '''
@@ -275,39 +282,125 @@ def same_person(h1,h2):
             h1.preferred_house_guests==h2.preferred_house_guests and \
             h1.misc_info==h2.misc_info 
 
-def generate_dummy_hosts_and_guests(num_hosts=DEFAULT_NUM_DUMMY_HOSTS, num_guests=DEFAULT_NUM_DUMMY_GUESTS):
+def generate_hosts_and_guests(input_xlsx='Sample_Housing_Data.xlsx', index_of_sheet_containing_data=0):
     if os.path.isfile('test_data.py'):
          with open('test_data.py','r') as f:
             host_line, guest_line = f.readlines()
             exec host_line
             exec guest_line
             return hosts, guests
-    host_ids = range(num_hosts)
-    guest_ids = range(num_hosts, num_hosts+num_guests)
-    num_preferred_house_guests=int(DEFAULT_NUM_DUMMY_HOSTS*0.3)
     
-    hosts = [Host(
-                name0='Dummy Host '+str(i), 
-                has_cats0=random.choice([True,False]),
-                has_dogs0=random.choice([True,False]),
-                willing_to_house_smokers0=random.choice([True,False]),
-                willing_to_provide_rides0=random.choice([True,False]),
-                preferred_house_guests0=list(set(random.sample(guest_ids,num_preferred_house_guests))),
-                id_num0=i,
-            ) for i in host_ids]
-    guests = [Guest(
-                name0='Dummy Guest '+str(i), 
-                can_be_around_cats0=random.choice([True,False]),
-                can_be_around_dogs0=random.choice([True,False]),
-                smokes0=random.choice([True,False]),
-                has_ride0=random.choice([True,False]),
-                preferred_house_guests0=list(set(random.sample(guest_ids,num_preferred_house_guests)+random.sample(host_ids,num_preferred_house_guests))), 
-                id_num0=i,
-            ) for i in guest_ids]
+    hosts0 = []
+    
+    workbook = xlrd.open_workbook(input_xlsx)
+    sheet = workbook.sheet_by_index(index_of_sheet_containing_data)
+    column_names = sheet.row_values(0)
+    
+    name_index = column_names.index("Name")
+    is_host_index = column_names.index("Local Housing")
+    num_spots_available_index = column_names.index("How Many People Can You House?")
+    late_night_tendencies_index = column_names.index("What is Your Dancing Preference?")
+    days_housing_is_available_index = column_names.index("On Which Days Can You Provide Housing?")
+    days_housing_is_needed_index = column_names.index("On Which Days Do You Need Housing?")
+    has_pets_index = column_names.index("Do You Have Pets?")
+    has_allergies_index = column_names.index("Do You Have Pet Allergies?")
+    is_smoker_index = column_names.index("Do You Smoke?")
+    willing_to_house_with_smokers_index = column_names.index("Acceptable to House with Smokers?")
+    willing_to_provide_rides_index = column_names.index("Can You Drive Your Guests to Events?")
+    has_ride_index = column_names.index("Do You Need Your Host to Drive You to Events?")
+    late_night_tendencies_index = column_names.index("What is Your Dancing Preference?")
+    
+    for rownum in xrange(1,sheet.nrows):
+        line_data = sheet.row_values(rownum)
+        if line_data[is_host_index]=="I live in Richmond and would be happy to host fellow Lindy Hoppers because I'm awesome!":
+            # This person is a host
+            name = line_data[name_index]
+            days_housing_is_available = frozenset([e for e in ['Friday', 'Saturday', 'Sunday'] if e in line_data[days_housing_is_available_index]])
+            if len(days_housing_is_available)==0:
+                continue
+            has_cats = 'cats' in line_data[has_pets_index].lower()
+            has_dogs = 'dogs' in line_data[has_pets_index].lower()
+            willing_to_house_smokers = 'Yes' in line_data[willing_to_house_with_smokers_index]
+            willing_to_provide_rides = 'Yes' in line_data[willing_to_provide_rides_index]
+            late_night_tendencies = "early sleeper"
+            if 'some late night' in line_data[late_night_tendencies_index]:
+                late_night_tendencies = "some late night"
+            if 'shut down the late night' in line_data[late_night_tendencies_index]:
+                late_night_tendencies = "survivors' club"
+            num_spots_available = max(0,int(line_data[num_spots_available_index]))
+            host_tuple = (Host(
+                    name0=name, 
+                    email0='NO_EMAIL', 
+                    phone_number0='', 
+                    days_housing_is_available0=days_housing_is_available,
+                    has_cats0=has_cats, 
+                    has_dogs0=has_dogs,
+                    willing_to_house_smokers0=willing_to_house_smokers, 
+                    willing_to_provide_rides0=willing_to_provide_rides, 
+                    late_night_tendencies0=late_night_tendencies, 
+                    preferred_house_guests0=[], 
+                    misc_info0='', 
+                    id_num0=generate_unique_identifier()
+                ), num_spots_available)
+            hosts0.append(host_tuple)
+        elif line_data[is_host_index]=="I will be traveling from out-of-town and would appreciate local housing.":
+            # This person is a guest
+            name = line_data[name_index]
+            days_housing_is_needed = frozenset([e for e in ['Friday', 'Saturday', 'Sunday'] if e in line_data[days_housing_is_needed_index]])
+            if len(days_housing_is_needed)==0:
+                continue
+            can_be_around_cats = not 'cats' in line_data[has_allergies_index]
+            can_be_around_dogs = not 'dogs' in line_data[has_allergies_index]
+            smokes = 'Yes' in line_data[is_smoker_index]
+            has_ride = 'No' in line_data[has_ride_index]
+            late_night_tendencies = "early sleeper"
+            if 'some late night' in line_data[late_night_tendencies_index]:
+                late_night_tendencies = "some late night"
+            if 'shut down the late night' in line_data[late_night_tendencies_index]:
+                late_night_tendencies = "survivors' club"
+            misc_info = ''
+            guest = Guest(
+                        name0=name, 
+                        email0='NO_EMAIL', 
+                        phone_number0='', 
+                        days_housing_is_needed0=days_housing_is_needed,
+                        can_be_around_cats0=can_be_around_cats, 
+                        can_be_around_dogs0=can_be_around_dogs, 
+                        smokes0=smokes, 
+                        has_ride0=has_ride, 
+                        late_night_tendencies0=late_night_tendencies, 
+                        preferred_house_guests0=[], 
+                        misc_info0='', 
+                        id_num0=generate_unique_identifier()
+                    )
+            guests.append(guest)
+    
+    # Generate random preferred house guests
+    for host,num_spots_available in random.sample(hosts0, int(len(hosts0)*0.4)): # Let's say 40% of the hosts (people, not spots) prefer guests
+        for guest in random.sample(guests, 6): # Let's say the host prefers 6 guests
+            host.preferred_house_guests.append(guest.id_num)
+    
+    for guest in random.sample(guests,int(len(guests)*0.4)): # Let's say 40% of the guests prefer co-guests
+        for preferred_guest in random.sample(guests,4): # Let's say the guest prefers 4 co-guests
+            guest.preferred_house_guests.append(preferred_guest.id_num)
+    
+    for guest in random.sample(guests,int(len(guests)*0.4)): # Let's say 40% of the guests prefer hosts
+        for preferred_host in random.sample(hosts0,3): # Let's say the guest prefers 3 hosts
+            guest.preferred_house_guests.append(preferred_host[0].id_num)
+    
+    # Clone each host so that there's now one Host object for each spot they have
+    for host, num_spots_available in hosts0:
+        hosts.append(host)
+        for i in xrange(num_spots_available-1):
+            clone = host.get_clone()
+            clone.id_num = generate_unique_identifier()
+            hosts.append(clone)
+    
     with open('test_data.py','w') as f:
         f.write('hosts='+hosts.__repr__())
         f.write('\n')
         f.write('guests='+guests.__repr__())
+    
     return hosts, guests
 
 class Genome(object):
