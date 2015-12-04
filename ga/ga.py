@@ -3,7 +3,6 @@
 '''
 TODO:
     Very Important
-        finish dummy host generation
     
     Less Important
         implement feature where guests cannot be housed with smokers if they don't want to be housed with smokers
@@ -282,7 +281,7 @@ def same_person(h1,h2):
             h1.preferred_house_guests==h2.preferred_house_guests and \
             h1.misc_info==h2.misc_info 
 
-def generate_hosts_and_guests(input_xlsx='Sample_Housing_Data.xlsx', index_of_sheet_containing_data=0):
+def generate_hosts_and_guests(input_xlsx='Expanded_Housing_Data.xlsx', index_of_sheet_containing_data=0):
     if os.path.isfile('test_data.py'):
          with open('test_data.py','r') as f:
             host_line, guest_line = f.readlines()
@@ -652,7 +651,7 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
         matplotlib.pyplot.close(fig_global_pareto_curve_graph)
 
 def usage(): 
-    # Example Usage: python ga.py -population_size 10 -generations 10
+    # Example Usage: python ga.py -population_size 100 -generations 100 -output_dir ./output
     print >> sys.stderr, 'python '+__file__+' <options>'
     print >> sys.stderr, ''
     print >> sys.stderr, 'Options:'
