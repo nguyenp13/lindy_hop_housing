@@ -86,12 +86,12 @@ def main():
     makedirs(temp_dir)
     starting_generation_descriptor_dir=starting_generation_descriptor_dir0
     for island_processing_iteration in xrange(num_inter_island_combinations):
-        print "Working on island iteration %d." % island_processing_iteration
+        print "%-33s Elapsed Time: %015f" % ("Working on island iteration "+str(island_processing_iteration)+'.',time.time()-start_time)
         result_dirs_list = []
         command_list = []
         info_tuple = (population_size, generations, tournament_size, elite_percent, mate_percent, mutation_percent, starting_generation_descriptor_dir)
         for island_index in xrange(num_islands):
-            island_output_dir_name = join_paths([temp_dir,)'output_[iteration:%03d][island_index:%03d]'%(island_processing_iteration,island_index))])
+            island_output_dir_name = join_paths([temp_dir,('output_[iteration:%03d][island_index:%03d]'%(island_processing_iteration,island_index))])
             makedirs(island_output_dir_name)
             result_dirs_list.append(island_output_dir_name)
             command = ('python ga.py -population_size %d -generations %d -tournament_size %d -elite_percent %f -mate_percent %f -mutation_percent %f -starting_generation_descriptor_dir %s -output_dir '+island_output_dir_name) % info_tuple

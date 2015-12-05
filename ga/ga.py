@@ -3,6 +3,7 @@
 '''
 TODO:
     Very Important
+        There is a bug such that the number of edges chosen is larger than the number of guests
     
     Less Important
         implement feature where guests cannot be housed with smokers if they don't want to be housed with smokers
@@ -66,8 +67,8 @@ SAVE_VISUALIZATIONS = True
 NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS=1
 VISUALIZATION_MIN_X=0
 VISUALIZATION_MIN_Y=0
-VISUALIZATION_MAX_X=400
-VISUALIZATION_MAX_Y=400
+VISUALIZATION_MAX_X=125
+VISUALIZATION_MAX_Y=125
 
 POPULATION_SIZE_DEFAULT_VALUE = 100
 GENERATIONS_DEFAULT_VALUE = 5000
@@ -98,7 +99,7 @@ def initialize_guest_and_host_data(output_dir):
         f.write('guests='+guests.__repr__())
     
     # Create Graph
-    housing_graph = networkx.Graph()
+    housing_graph = networkx.DiGraph()
     
     for host in hosts:
         housing_graph.add_node(host.id_num)
@@ -109,7 +110,6 @@ def initialize_guest_and_host_data(output_dir):
         for guest in guests:
             if are_compatible(host, guest):
                 housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
-    
 
 def add_upper_left_text_box(subplot, text):
     subplot.text(x=0.04, y=0.96, s=text, horizontalalignment='left', verticalalignment='top', transform=subplot.transAxes, bbox=dict(boxstyle='round', facecolor='wheat', alpha=1.0))
@@ -416,7 +416,7 @@ class Genome(object):
     def __init__(self, initial_edges=[]):
         self.chosen_edges = initial_edges
         if initial_edges==[]: 
-            # This is a weird hack, but it's necessary bc I suspect there's a bug in the compiler (either that or I'm doing something really funky that I don't realize that's making pointer get all crazy and cause all Genomes initialized with initial_edges=[] to have the same edges). 
+            # This is a weird hack, but it's necessary bc I suspect there's a bug in the compiler (either that or I'm doing something really funky that I don't realize that's making pointers get all crazy and cause all Genomes initialized with initial_edges=[] to have the same edges). 
             self.chosen_edges=[]
         self.fill_edges()
     
@@ -645,7 +645,7 @@ def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DE
             f.write('N, P\n')
             for (_,inverse_n,inverse_p) in global_pareto_frontier:
                 f.write(str(int(1.0/inverse_n-1))+', '+str(int(1.0/inverse_p-1))+'\n')
-        
+    
     if SAVE_VISUALIZATIONS:
         matplotlib.pyplot.close(fig_all_points)
         matplotlib.pyplot.close(fig_global_pareto_curve_graph)
