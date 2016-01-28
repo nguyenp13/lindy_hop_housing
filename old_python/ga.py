@@ -3,8 +3,65 @@
 '''
 TODO:
     Very Important
-        There is a bug such that the number of edges chosen is larger than the number of guests
-    
+        Add gender to teh host and guest classes
+        add a person_id for each host to make telling if the hosts are teh same faster as well as making it easier to determine who else is staying with the host
+        update the tips and hacks to explain the P and N concepts
+        change it so that the hosts and guests are no longer lists but dictionaries where the key is the person's id_num
+        
+        Change the code so that it takes place in several stages
+            step 1: preprocessing the data
+                we will always need to go through the initial data anyway to read Misc. Comments. 
+                our code will go through and tell if there are any problems with any entries, the user will have to fix them. 
+                    problems can be bad data types, mispelled preferred co-guest names, etc. 
+                during this initial phase, it should be noted that the user must add in manually if any two people can't stay together for specific reasons
+            step 2: we run our GA
+            Step 3: we print out our results for each solution we have
+                we will state what things we could not obey when determing P, e.g. preferred guests they couldn't stay with, different late night tendencies, etc. It should be easily read by our user
+        
+        we need to change teh way we evaluate P
+            P will be determined by many values, not just preferred guests. some ideas include
+                how early a guest registered (what to do if this person is in a carpool with someone who registered last minute)
+                prefered co-guests
+                required co-guests (bc car pools)
+                being housed with people from the same scene? Maybe? Ignore that for this iteration. 
+                late night tendencies. Does this matter? 
+                preferences with which gender they'd like to be housed? This can be ignored. 
+            can we ask that people list no more than 4 carpool buddies?
+            can we have it so that by the time housing registration closes, people must list their car pools?
+                make registration work in such a way that they can edit who their car pool buddies are until the very last minute?
+                    either that or make it some grunt work to be done by the housing coordinator before they use our algorithm.
+                    we can have it so that when people list who they MUST stay with, they list a reason. 
+                        Carpools and girlfriend/boyfriend are good reasons.
+                        bc we're friends or want to hang out a lot is not.
+            I think we should rearrange the algorithm so that people definitely already have carpools organized. 
+                if they bitch about it, we can just say that they changed their plans after housing has been assigned. 
+                we have to make them agree to it before they finish updating their registration, e.g. "You know that we will assign housing with carpools the way they are right now, and that we will not take into account carpool changes after housing closes."
+                    We can make it so that there is a separate account for housing
+                        make the housing coordinator nag the shit out of people the week before housing closes to fill out their housing.
+                        send them an email saying "URGENT: We don't have your housing info. FILL IT OUT NOW." 
+                So, we have some hard restrictions and some soft restrictions
+                    Hard restrictions
+                        cats, dogs, smoking, rides
+                        required co-guests must stay together so taht we can assign housing based on groups
+                    Soft restrictions
+                        how early the guest registered
+                        preferred co-guests
+                        being housed with ppl from teh same scene
+                        late night tendencies
+                        gender housing tendencies (if they would have needed to stay with people of the same gender, we would have seen that in teh misc. info.)
+        
+        Would it be a good idea to have the GA take into account splitting carpools to get a higher N?
+            what I mean is that we have our set of fixed groups of people who need to be togther
+                this could be large groups like a whole scene or smaller groups of friends (about 8 or so) or small carpool groups of 4
+            We could split them so that we might need to split a carpool group of 4 into two groups of two so that all four of them can get housed instead of not housing the 4 of them bc they won't fit somewhere. 
+        
+        change P to be a linear combination of all the soft values
+        have diminishing returns for people staying together
+            different methods
+                per person, 1/(something) for each edge, something can be n**2, 2**n, etc.
+                per group, 1/n of the graph. 
+        We're going to assume that preferred co-guests and required co-guests are the same 
+        
     Less Important
         implement feature where guests cannot be housed with smokers if they don't want to be housed with smokers
         Take into account gender preferences when it comes to calculating P
@@ -65,17 +122,17 @@ START_TIME=time.time()
 
 SAVE_VISUALIZATIONS = True
 NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS=1
-VISUALIZATION_MIN_X=0
+VISUALIZATION_MIN_X=400
 VISUALIZATION_MIN_Y=0
-VISUALIZATION_MAX_X=125
-VISUALIZATION_MAX_Y=125
+VISUALIZATION_MAX_X=50
+VISUALIZATION_MAX_Y=450
 
-POPULATION_SIZE_DEFAULT_VALUE = 100
+POPULATION_SIZE_DEFAULT_VALUE = 25
 GENERATIONS_DEFAULT_VALUE = 5000
-TOURNAMENT_SIZE_DEFAULT_VALUE = 16
-ELITE_PERCENT_DFAULT_VALUE = 70
-MATE_PERCENT_DEFAULT_VALUE = 15
-MUTATION_PERCENT_DEFAULT_VALUE = 15
+TOURNAMENT_SIZE_DEFAULT_VALUE = 32
+ELITE_PERCENT_DFAULT_VALUE = 80
+MATE_PERCENT_DEFAULT_VALUE = 10
+MUTATION_PERCENT_DEFAULT_VALUE = 10
 STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE = '.'
 OUTPUT_DIR_DEFAULT_VALUE = './output'
 

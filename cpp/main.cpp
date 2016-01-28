@@ -2,14 +2,14 @@
 /*
 
 TODO:
-
+    More Important:
+        Finish Host class
+        
+    Less Important:
+        Look into more compile options to make the code run faster. Stick it in the Makefile
 */
 
-#include <cstdio>
-#include <cstdlib>
-#include <cfloat>
-#include <chrono>
-#include "./util/util.h"
+#include "util.h"
 
 using std::cout;
 using std::endl;
@@ -31,16 +31,7 @@ int main(int argc, char* argv[]) {
     srand(std::time(0)); 
     
     ////////////////////////////////////////////////////////////////////////////////
-    Undirected_Graph g; 
-    g.add_vertex(11); 
-    g.add_vertex(22); 
-    g.add_vertex(33); 
-    g.add_edge_by_vertex_id(22,33,111); 
-    cout << g.get_edge_by_id(111) << endl; 
-    cout << source(g.get_edge_by_id(111),g.g) << endl; 
-    cout << target(g.get_edge_by_id(111),g.g) << endl; 
-//    cout << g[0].vertex_id << endl; 
-    g.get_vertex_by_id(22); 
+    PRINT("WOO!")
     ////////////////////////////////////////////////////////////////////////////////
     
     auto end_time = std::chrono::high_resolution_clock::now();
