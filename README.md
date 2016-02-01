@@ -5,6 +5,14 @@ Automated Housing Assigment Generator for Lindy Hop Events.
 =======================================================================================================================================
 
 TODO:
+    
+    Refactor the code so it runs nicely
+    Update it to run more cleverly when calculating P so that it doesn’t run so slowly
+    Tiers of preferences
+    Required co-guests, e.g. carpool buddies
+    Or key staff volunteers
+    Preferred co-guests, i.e. friends
+    
     Very Important
         Add gender to teh host and guest classes
         add a person_id for each host to make telling if the hosts are teh same faster as well as making it easier to determine who else is staying with the host
