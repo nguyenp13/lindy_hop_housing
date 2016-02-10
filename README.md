@@ -8,10 +8,14 @@ TODO:
     
     Refactor the code so it runs nicely
     Update it to run more cleverly when calculating P so that it doesn’t run so slowly
+    test everything to make sure the GA code works
+        test P
     Tiers of preferences
     Required co-guests, e.g. carpool buddies
     Or key staff volunteers
     Preferred co-guests, i.e. friends
+    Make it so that there's one car for every host. We'll have to remove rides from are compatible. 
+        If there's someone who can't get a ride, stick that in the post report. 
     
     Very Important
         Add gender to teh host and guest classes

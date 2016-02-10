@@ -1,9 +1,11 @@
 #!/usr/bin/python
 
 '''
+
 Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events. 
 
 To understand how to use this code, see the usage() function or use "python ga.py -usage" on the commandline. 
+
 '''
 
 import os
@@ -11,6 +13,7 @@ import sys
 import pdb
 import time
 from util import *
+from HostGuest import *
 from ga import GeneticAlgorithm
 
 START_TIME=time.time()
@@ -24,15 +27,13 @@ MATE_PERCENT_DEFAULT_VALUE = 10
 MUTATION_PERCENT_DEFAULT_VALUE = 10
 OUTPUT_DIR_DEFAULT_VALUE = './output'
 
-def generate_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_containing_data=0, previously_generated_data='data.py', newly_generated_data='data.py'):
-    if os.path.isfile('test_data.py'):
-         with open('test_data.py','r') as f:
-            host_line, guest_line = f.readlines()
-            exec host_line
-            exec guest_line
-            return hosts, guests
-    
-    hosts0 = []
+def get_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_containing_data=0, previously_generated_data_file_name='data.py', newly_generated_data_file_name='data.py'):
+    if os.path.isfile(previously_generated_data_file_name):
+         with open(previously_generated_data_file_name,'r') as f:
+            line=f.readlines()[0]
+            if 'host_dict, guest_dict, host_spot_dict=(' in line:
+                exec line
+                return host_dict, guest_dict, host_spot_dict
     
     workbook = xlrd.open_workbook(input_xlsx)
     sheet = workbook.sheet_by_index(index_of_sheet_containing_data)
@@ -52,6 +53,10 @@ def generate_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_con
     has_ride_index = column_names.index("Do You Need Your Host to Drive You to Events?")
     late_night_tendencies_index = column_names.index("What is Your Dancing Preference?")
     
+    host_dict=dict()
+    guest_dict=dict()
+    host_spot_dict=dict()
+    
     for rownum in xrange(1,sheet.nrows):
         line_data = sheet.row_values(rownum)
         if line_data[is_host_index]=="I live in Richmond and would be happy to host fellow Lindy Hoppers because I'm awesome!":
@@ -70,7 +75,8 @@ def generate_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_con
             if 'shut down the late night' in line_data[late_night_tendencies_index]:
                 late_night_tendencies = "survivors' club"
             num_spots_available = max(0,int(line_data[num_spots_available_index]))
-            host_tuple = (Host(
+            current_host_id_num=generate_unique_identifier()
+            host_dict[current_host_id_num] = Host(
                     name0=name, 
                     email0='NO_EMAIL', 
                     phone_number0='', 
@@ -81,10 +87,12 @@ def generate_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_con
                     willing_to_provide_rides0=willing_to_provide_rides, 
                     late_night_tendencies0=late_night_tendencies, 
                     preferred_house_guests0=[], 
+                    num_spots_available0=num_spots_available, 
                     misc_info0='', 
-                    id_num0=generate_unique_identifier()
-                ), num_spots_available)
-            hosts0.append(host_tuple)
+                    id_num0=current_host_id_num)
+            for _ in xrange(num_spots_available):
+                host_spot_id_num=generate_unique_identifier()
+                host_spot_dict[host_spot_id_num](HostSpot(host_id_num0=current_host_id_num, host_spot_id_num0=host_spot_id_num))
         elif line_data[is_host_index]=="I will be traveling from out-of-town and would appreciate local housing.":
             # This person is a guest
             name = line_data[name_index]
@@ -101,7 +109,8 @@ def generate_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_con
             if 'shut down the late night' in line_data[late_night_tendencies_index]:
                 late_night_tendencies = "survivors' club"
             misc_info = ''
-            guest = Guest(
+            current_guest_id_num=generate_unique_identifier()
+            guest_dict[current_guest_id_num] = Guest(
                         name0=name, 
                         email0='NO_EMAIL', 
                         phone_number0='', 
@@ -115,62 +124,27 @@ def generate_hosts_and_guests(input_xlsx='Housing_Data.xlsx', index_of_sheet_con
                         misc_info0='', 
                         id_num0=generate_unique_identifier()
                     )
-            guests.append(guest)
     
     # Generate random preferred house guests
-    for host,num_spots_available in random.sample(hosts0, int(len(hosts0)*0.4)): # Let's say 40% of the hosts (people, not spots) prefer guests
-        for guest in random.sample(guests, 6): # Let's say the host prefers 6 guests
+    for host in random.sample(host_dict.values(), int(len(host_dict.values())*0.4)): # Let's say 40% of the hosts prefer guests
+        for guest in random.sample(guest_dict.values(), 6): # Let's say the host prefers 6 guests
             host.preferred_house_guests.append(guest.id_num)
     
-    for guest in random.sample(guests,int(len(guests)*0.4)): # Let's say 40% of the guests prefer co-guests
-        for preferred_guest in random.sample(guests,4): # Let's say the guest prefers 4 co-guests
-            guest.preferred_house_guests.append(preferred_guest.id_num)
+    for guest in random.sample(guest_dict.values(),int(len(guest_dict.values())*0.4)): # Let's say 40% of the guests prefer co-guests
+        for preferred_guest0 in random.sample(guest_dict.values(),4): # Let's say the guest prefers 4 co-guests
+            preferred_guest_id_num=preferred_guest0.id_num
+            while preferred_guest_id_num==guest.id_num: # This may seem slow and round about, but the probability we take this branch is very low. Using random.sample once is faster than using random.choice in every iteration of a for loop. Thus, this leads to faster run time. 
+                preferred_guest_id_num=random.choice(guest_dict.values()).id_num
+            guest.preferred_house_guests.append(preferred_guest_id_num)
     
-    for guest in random.sample(guests,int(len(guests)*0.4)): # Let's say 40% of the guests prefer hosts
-        for preferred_host in random.sample(hosts0,3): # Let's say the guest prefers 3 hosts
-            guest.preferred_house_guests.append(preferred_host[0].id_num)
+    for guest in random.sample(guest_dict.values(),int(len(guest_dict.values())*0.4)): # Let's say 40% of the guests prefer hosts
+        for preferred_host in random.sample(host_dict.values(),3): # Let's say the guest prefers 3 hosts
+            guest.preferred_house_guests.append(preferred_host.id_num)
     
-    # Clone each host so that there's now one Host object for each spot they have
-    for host, num_spots_available in hosts0:
-        hosts.append(host)
-        for i in xrange(num_spots_available-1):
-            clone = host.get_clone()
-            clone.id_num = generate_unique_identifier()
-            hosts.append(clone)
+    with open(newly_generated_data_file_name,'w') as f:
+        f.write('host_dict, guest_dict, host_spot_dict=('+host_dict.__repr__()+', '+guest_dict.__repr__()+', '+host_spot_dict.__repr__()+')')
     
-    with open('test_data.py','w') as f:
-        f.write('hosts='+hosts.__repr__())
-        f.write('\n')
-        f.write('guests='+guests.__repr__())
-    
-    return hosts, guests
-
-#def get_guest_and_host_data(output_dir):
-#    
-#    # Add hosts and guests
-#    hosts, guests = generate_hosts_and_guests()
-#    print "Number of Host Spots:", len(hosts)
-#    print "Number of Guests:", len(guests)
-#    print 
-#    
-#    # Save host and guest data
-#    with open(join_paths([os.path.abspath(output_dir),'data.py']),'w') as f:
-#        f.write('hosts='+hosts.__repr__())
-#        f.write('\n')
-#        f.write('guests='+guests.__repr__())
-#    
-#    # Create Graph
-#    housing_graph = networkx.DiGraph()
-#    
-#    for host in hosts:
-#        housing_graph.add_node(host.id_num)
-#    for guest in guests:
-#        housing_graph.add_node(guest.id_num)
-#    
-#    for host in hosts:
-#        for guest in guests:
-#            if are_compatible(host, guest):
-#                housing_graph.add_edge(host.id_num, guest.id_num) # All of the edges should be ordered in (host,guest) ordering
+    return host_dict, guest_dict, host_spot_dict
 
 def usage(): 
     # Example Usage: python ga.py -population_size 100 -num_generations 100 -output_dir ./output
@@ -232,7 +206,14 @@ def main():
     print "    output_dir:", output_dir
     print 
     
-    ga = GeneticAlgorithm(population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
+    host_dict, guest_dict, host_spot_dict = get_hosts_and_guests('Toy_Housing_Data.xlsx')
+    
+    print "Housing data has been parsed."
+    print "    Number of Hosts: "+str(len(host_dict))
+    print "    Number of Spots for Guests: "+str(len(host_spot_dict))
+    print "    Number of Guests: "+str(len(guest_dict))
+    
+    ga = GeneticAlgorithm(host_dict, guest_dict, host_spot_dict, population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
     
     print 
     print 'Total Run Time: '+str(time.time()-START_TIME)

@@ -10,9 +10,27 @@ import string
 import xlrd
 import matplotlib
 import matplotlib.pyplot
+import urllib2
+import re
 
 UNIQUE_IDENTIFIER_COUNTER = 0
+DEBUG=True
 inf = float('inf')
+
+def find_string(head, tail, text_to_search):
+    match = re.search('('+head+').*('+tail+')', text_to_search)
+    return match.group(0) if match else None
+
+def find_all_strings(head, tail, text_to_search):
+    matches = re.finditer('('+head+').*('+tail+')', text_to_search)
+    ans = []
+    for match in matches:
+        if match:
+            ans.append(match.group(0))
+    return ans
+
+def get_contents_from_link(link):
+    return urllib2.urlopen(link).read()
 
 def join_paths(l):
     return reduce(os.path.join,l)
@@ -75,9 +93,10 @@ def get_command_line_param_val_default_value(args, param_option, default_value):
     return default_value
 
 def assertion(condition, message, error_code=1):
-    if not condition:
-        print >> sys.stderr, ''
-        print >> sys.stderr, message
-        print >> sys.stderr, ''
-        sys.exit(error_code)
+    if DEBUG:
+        if not condition:
+            print >> sys.stderr, ''
+            print >> sys.stderr, message
+            print >> sys.stderr, ''
+            sys.exit(error_code)
 
