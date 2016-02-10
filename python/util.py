@@ -10,6 +10,7 @@ import string
 import xlrd
 import matplotlib
 import matplotlib.pyplot
+import urllib
 import urllib2
 import re
 
@@ -31,6 +32,9 @@ def find_all_strings(head, tail, text_to_search):
 
 def get_contents_from_link(link):
     return urllib2.urlopen(link).read()
+
+def download_via_http(link, destination_file):
+    urllib.URLopener().retrieve(link, destination_file)
 
 def join_paths(l):
     return reduce(os.path.join,l)
