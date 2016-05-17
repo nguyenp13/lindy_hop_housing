@@ -7,7 +7,7 @@ all: LDFLAGS = -fopenmp
 debug: LDFLAGS = -fopenmp 
 
 EXE=main
-SRCS=main.cpp util.cpp
+SRCS=main.cpp 
 OBJS=$(SRCS:.cpp=.o)
 
 all: $(SRCS) $(EXE)
