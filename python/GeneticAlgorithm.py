@@ -407,11 +407,6 @@ class GeneticAlgorithm(object):
         
         self.genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size)]
         
-        for g in self.genomes_list:
-            dict_pretty_print(g.get_misc_info())
-            print map(lambda x: str(self.dict_of_hosts[self.dict_of_host_spots[x[0]]]["first_name"])+(self.dict_of_guests[x[1]]["first_name"]), sorted(g.chosen_edges))
-#        pdb.set_trace()
-        
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \
