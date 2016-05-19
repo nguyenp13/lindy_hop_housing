@@ -47,8 +47,7 @@ class Genome(object):
         return ans
         
     def mutate(self):
-        random.shuffle(self.chosen_edges)
-        self.chosen_edges = self.chosen_edges[:len(self.chosen_edges)/2]
+        self.chosen_edges = random.sample(self.chosen_edges, len(self.chosen_edges)/2)
         self.fill_edges()
     
     def get_clone(self):
@@ -159,7 +158,7 @@ class Genome(object):
         return ans
         
 def mate(parent_1, parent_2):
-    child = Genome()
+    child = Genome(parent_1.dict_of_hosts, parent_1.dict_of_guests, parent_1.dict_of_host_spots, parent_1.dict_hosts_to_host_spots, parent_1.graph, [])
     edges_1 = parent_1.chosen_edges
     edges_2 = parent_2.chosen_edges
     random.shuffle(edges_1)
@@ -171,11 +170,13 @@ def mate(parent_1, parent_2):
         for i, edge in enumerate(edges_1[starting_index_1:]):
             if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
                 child.chosen_edges.append(edge)
+                print "edge from parent 1", edge
                 break
         starting_index_1+=1+i
         for i, edge in enumerate(edges_2[starting_index_2:]):
             if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
                 child.chosen_edges.append(edge)
+                print "edge from parent 2", edge
                 break
         starting_index_2+=1+i
     child.fill_edges()
@@ -399,14 +400,13 @@ class GeneticAlgorithm(object):
         
         self.graph = Graph(nodes0=self.dict_of_host_spots.keys()+self.dict_of_guests.keys())
         for host_spot_id_num, host_id_num in self.dict_of_host_spots.items():
-            # [are_compatible(self.dict_of_hosts[host_id_num],guest) for guest_id_num, guest in self.dict_of_guests.items()]
             host = self.dict_of_hosts[host_id_num]
             for guest_id_num, guest in self.dict_of_guests.items():
                 if are_compatible(host,guest):
                     self.graph.add_edge(host_spot_id_num,guest_id_num) # Edges are stored in (host_spot_id_num, guest_id_num) order
         
         self.genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size)]
-        
+    
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \
