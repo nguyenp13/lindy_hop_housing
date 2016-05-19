@@ -1,30 +1,19 @@
 
-#import multiprocessing
-#import copy
-#import numpy
-#import matplotlib
-#import matplotlib.pyplot
-import random
-from HostGuest import *
+import main 
 from util import *
 
 class Graph(object): 
     
-    def __init__(self, nodes0=set(), edges0=list()): 
-        if isinstance(set(nodes0),set):
-            self.nodes = nodes0
-        else:
-            self.nodes = set(nodes0)
+    def __init__(self, nodes0=set(), edges0=set()): 
+        self.nodes = nodes0
         self.edges = edges0
-        for node1, node2 in edges0:
-            if not node1 in self.nodes:
-                print 'Warning: '+str(node1)+' is in the initializing edge ('+str(node1)+', '+str(node2)+') but is not in the initializing nodes.'
-            if not node2 in self.nodes:
-                print 'Warning: '+str(node2)+' is in the initializing edge ('+str(node1)+', '+str(node2)+') but is not in the initializing nodes.'
-            self.edges.add((node1,node2))
+        if main.DEBUG:
+            for node1, node2 in edges0:
+                assertion(node1 in self.nodes, 'Warning: '+str(node1)+' is in the initializing edge ('+str(node1)+', '+str(node2)+') but is not in the initializing nodes.')
+                assertion(node2 in self.nodes, 'Warning: '+str(node2)+' is in the initializing edge ('+str(node1)+', '+str(node2)+') but is not in the initializing nodes.')
     
     def add_edge(self, node1, node2):
-        self.edges.append((node1, node2))
+        self.edges.add((node1, node2))
     
     def add_node(node):
         self.nodes.add(node)
@@ -32,17 +21,16 @@ class Graph(object):
 class Genome(object):
     
     def fill_edges(self):
-        edges = self.graph.edges
-        random.shuffle(edges)
-        for (node1,node2) in edges: 
+        shuffled_edges = random.sample(self.graph.edges, len(self.graph.edges))
+        for (node1,node2) in shuffled_edges:
             if node1 not in [e[0] for e in self.chosen_edges] and node2 not in [e[1] for e in self.chosen_edges]:
                 self.chosen_edges.append((node1,node2))
         
-    def __init__(self, host_dict0, guest_dict0, host_spot_dict0, graph0, initial_edges=[]):
-        # these actually just save the object reference, there isn't a copy taking place
-        self.host_dict=host_dict0
-        self.guest_dict=guest_dict0
-        self.host_spot_dict=host_spot_dict0
+    def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, graph0, initial_edges=[]):
+        self.dict_of_hosts=dict_of_hosts0
+        self.dict_of_guests=dict_of_guests0
+        self.dict_of_host_spots=dict_of_host_spots0
+        self.dict_hosts_to_host_spots=dict_hosts_to_host_spots0
         self.graph=graph0 
         self.chosen_edges = list(initial_edges)
         self.fill_edges()
@@ -50,9 +38,9 @@ class Genome(object):
     def __repr__(self):
         ans = ''+ \
             '''Genome('''+ \
-                '''host_dict0='''+self.host_dict.__repr__()+''', '''+ \
-                '''guest_dict0='''+self.guest_dict.__repr__()+''', '''+ \
-                '''host_spot_dict0='''+self.host_spot_dict.__repr__()+''', '''+ \
+                '''dict_of_hosts0='''+self.dict_of_hosts.__repr__()+''', '''+ \
+                '''dict_of_guests0='''+self.dict_of_guests.__repr__()+''', '''+ \
+                '''dict_of_host_spots0='''+self.dict_of_host_spots.__repr__()+''', '''+ \
                 '''graph0='''+self.graph.__repr__()+''', '''+ \
                 '''initial_edges='''+self.chosen_edges.__repr__()+''', '''+ \
             ''')'''
@@ -64,44 +52,127 @@ class Genome(object):
         self.fill_edges()
     
     def get_clone(self):
-        return Genome(self.graph, self.chosen_edges)
+        return Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.graph, self.chosen_edges)
     
     def get_N_value(self):
         return len(self.chosen_edges)
     
     def get_P_value(self):
         P = 0
+        dict_host_to_list_of_guest_id_nums = {}
+        for host_id_num in self.dict_of_hosts.keys():
+            dict_host_to_list_of_guest_id_nums[host_id_num] = []
         for host_spot_id_num, guest_id_num in self.chosen_edges:
-            if host_id_num in self.guest_dict[guest_id_num].preferred_house_guests: # guest prefers host
+            host_id_num = self.dict_of_host_spots[host_spot_id_num]
+            dict_host_to_list_of_guest_id_nums[host_id_num].append(guest_id_num)
+        for host_spot_id_num, guest_id_num in self.chosen_edges:
+            host_id_num = self.dict_of_host_spots[host_spot_id_num]
+            host = self.dict_of_hosts[host_id_num]
+            host_name = host['first_name']+' '+host['last_name']
+            host_prefers_these_housing_buddies = host["preferred_housing_buddies"]
+            guest = self.dict_of_guests[guest_id_num]
+            guest_name = guest['first_name']+' '+guest['last_name']
+            guest_prefers_these_housing_buddies = guest["preferred_housing_buddies"]
+            id_nums_of_all_guests_staying_with_host = dict_host_to_list_of_guest_id_nums[host_id_num]
+            names_of_all_guests_staying_with_host = [self.dict_of_guests[g_id_num]['first_name']+' '+self.dict_of_guests[g_id_num]['last_name'] for g_id_num in id_nums_of_all_guests_staying_with_host]
+            genders_of_all_guests_staying_with_host = [self.dict_of_guests[g_id_num]['gender'] for g_id_num in id_nums_of_all_guests_staying_with_host]
+            if host_name in guest_prefers_these_housing_buddies: # guest prefers host
                 P += 1
-            if guest_id_num in self.host_dict[host_id_num].preferred_house_guests: # host prefers guest
+            if guest_name in host_prefers_these_housing_buddies: # host prefers guest
                 P += 1
-            if : # guest prefers guest
-            ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ################################## ###############################################################3
+            P += len(list_intersection(guest_prefers_these_housing_buddies, names_of_all_guests_staying_with_host)) # guest prefers guest
         return P
-
-#def mate(parent_1, parent_2):
-#    child = Genome()
-#    edges_1 = parent_1.chosen_edges
-#    edges_2 = parent_2.chosen_edges
-#    random.shuffle(edges_1)
-#    random.shuffle(edges_2)
-#    child.chosen_edges=[]
-#    starting_index_1=0
-#    starting_index_2=0
-#    while starting_index_1<len(edges_1)-1 or starting_index_2<len(edges_2)-1:
-#        for i, edge in enumerate(edges_1[starting_index_1:]):
-#            if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
-#                child.chosen_edges.append(edge)
-#                break
-#        starting_index_1+=1+i
-#        for i, edge in enumerate(edges_2[starting_index_2:]):
-#            if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
-#                child.chosen_edges.append(edge)
-#                break
-#        starting_index_2+=1+i
-#    child.fill_edges()
-#    return child
+    
+    def get_misc_info(self):
+        ans = {}
+        ans["P_value"] = self.get_P_value()
+        ans["N_value"] = self.get_N_value()
+        ans["host_actively_prefers_gender_of_guest"]=0
+        ans["guest_actively_prefers_gender_of_coguests"]=0
+        ans["guest_can_get_needed_rides_from_host"]=0
+        
+        ans["host_guest_late_night_tendencies_match"]=0
+        ans["host_guest_early_sleeper_some_late_night_mismatch"]=0
+        ans["host_guest_early_sleeper_survivors_club_mismatch"]=0
+        ans["host_guest_some_late_survivors_club_mismatch"]=0
+        
+        ans["coguest_late_night_tendencies_match"]=0
+        ans["coguest_early_sleeper_some_late_night_mismatch"]=0
+        ans["coguest_early_sleeper_survivors_club_mismatch"]=0
+        ans["coguest_some_late_survivors_club_mismatch"]=0
+        
+        dict_host_to_list_of_guest_id_nums = {}
+        for host_id_num in self.dict_of_hosts.keys():
+            dict_host_to_list_of_guest_id_nums[host_id_num] = []
+        for host_spot_id_num, guest_id_num in self.chosen_edges:
+            host_id_num = self.dict_of_host_spots[host_spot_id_num]
+            dict_host_to_list_of_guest_id_nums[host_id_num].append(guest_id_num)
+        for host_spot_id_num, guest_id_num in self.chosen_edges:
+            host_id_num = self.dict_of_host_spots[host_spot_id_num]
+            host = self.dict_of_hosts[host_id_num]
+            guest = self.dict_of_guests[guest_id_num]
+            id_nums_of_all_guests_staying_with_host = dict_host_to_list_of_guest_id_nums[host_id_num]
+            genders_of_all_guests_staying_with_host = [self.dict_of_guests[g_id_num]['gender'] for g_id_num in id_nums_of_all_guests_staying_with_host]
+            # If a person prefers either, then the person doesn't ACTIVELY prefer any gender
+            if (host["hosts_prefer_which_gender"]==guest["gender"]):
+                ans["host_actively_prefers_gender_of_guest"]+=1
+            for coguest_gender in genders_of_all_guests_staying_with_host:
+                if guest["guests_prefer_which_gender"]==coguest_gender:
+                    ans["guest_actively_prefers_gender_of_coguests"]+=1
+            if host["willing_to_provide_rides"] and not guest["has_ride"]: 
+                # True only if the guest ACTIVELY NEEDS a ride and host can provide rides
+                ans["guest_can_get_needed_rides_from_host"]+=1
+            # Late Night Tendencies Matching
+            host_late_night_tendencies = host["late_night_tendencies"]
+            guest_late_night_tendencies = guest["late_night_tendencies"]
+            if host_late_night_tendencies == guest_late_night_tendencies:
+                ans["host_guest_late_night_tendencies_match"]+=1
+            if "early sleeper" in (host_late_night_tendencies, guest_late_night_tendencies):
+                if "some late night" in (host_late_night_tendencies, guest_late_night_tendencies): 
+                    ans["host_guest_early_sleeper_some_late_night_mismatch"]+=1
+            if "survivors' club" in (host_late_night_tendencies, guest_late_night_tendencies): 
+                if "early sleeper" in (host_late_night_tendencies, guest_late_night_tendencies):
+                    ans["host_guest_early_sleeper_survivors_club_mismatch"]+=1
+            if "some late night" in (host_late_night_tendencies, guest_late_night_tendencies):
+                if "survivors' club" in (host_late_night_tendencies, guest_late_night_tendencies): 
+                    ans["host_guest_some_late_survivors_club_mismatch"]+=1
+            for g_id_num in id_nums_of_all_guests_staying_with_host:
+                other_guest_preference = self.dict_of_guests[g_id_num]["late_night_tendencies"]
+                if other_guest_preference == guest_late_night_tendencies:
+                    ans["coguest_late_night_tendencies_match"]+=1
+                if "early sleeper" in (other_guest_preference, guest_late_night_tendencies):
+                    if "some late night" in (other_guest_preference, guest_late_night_tendencies): 
+                        ans["coguest_early_sleeper_some_late_night_mismatch"]+=1
+                if "survivors' club" in (other_guest_preference, guest_late_night_tendencies): 
+                    if "early sleeper" in (other_guest_preference, guest_late_night_tendencies):
+                        ans["coguest_early_sleeper_survivors_club_mismatch"]+=1
+                if "some late night" in (other_guest_preference, guest_late_night_tendencies):
+                    if "survivors' club" in (other_guest_preference, guest_late_night_tendencies): 
+                        ans["coguest_some_late_survivors_club_mismatch"]+=1
+        return ans
+        
+def mate(parent_1, parent_2):
+    child = Genome()
+    edges_1 = parent_1.chosen_edges
+    edges_2 = parent_2.chosen_edges
+    random.shuffle(edges_1)
+    random.shuffle(edges_2)
+    child.chosen_edges=[]
+    starting_index_1=0
+    starting_index_2=0
+    while starting_index_1<len(edges_1)-1 or starting_index_2<len(edges_2)-1:
+        for i, edge in enumerate(edges_1[starting_index_1:]):
+            if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
+                child.chosen_edges.append(edge)
+                break
+        starting_index_1+=1+i
+        for i, edge in enumerate(edges_2[starting_index_2:]):
+            if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
+                child.chosen_edges.append(edge)
+                break
+        starting_index_2+=1+i
+    child.fill_edges()
+    return child
 
 #def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DEFAULT_VALUE, tournament_size=TOURNAMENT_SIZE_DEFAULT_VALUE, elite_percent=ELITE_PERCENT_DFAULT_VALUE, mate_percent=MATE_PERCENT_DEFAULT_VALUE, mutation_percent=MUTATION_PERCENT_DEFAULT_VALUE,starting_generation_descriptor_dir=STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE,output_dir=OUTPUT_DIR_DEFAULT_VALUE): 
 #    
@@ -278,42 +349,63 @@ class Genome(object):
 #        matplotlib.pyplot.close(fig_all_points)
 #        matplotlib.pyplot.close(fig_global_pareto_curve_graph)
 
+def are_compatible(host,guest):
+    local_debug=False
+    def local_debug_print(text):
+        if local_debug:
+            print text
+    if not main.EVENT_WE_ARE_HOUSING_FOR in host["events_doing_housing"]:
+        local_debug_print('EVENT1')
+        return False
+    if not main.EVENT_WE_ARE_HOUSING_FOR in guest["events_needing_housing"]:
+        local_debug_print('EVENT2')
+        return False
+    if not guest["days_housing_is_needed"].issubset(host["days_housing_is_available"]):
+        local_debug_print('DAYS')
+        return False
+    if host["has_cats"]:
+        if not guest["can_be_around_cats"]:
+            local_debug_print('CATS')
+            return False
+    if host["has_dogs"]:
+        if not guest["can_be_around_dogs"]:
+            local_debug_print('DOGS')
+            return False
+    if guest["smokes"]: 
+        if not host["willing_to_house_smokers"]:
+            local_debug_print('SMOKING')
+            return False
+    return True
+
 class GeneticAlgorithm(object):
     
-    def __init__(self, host_dict0, guest_dict0, host_spot_dict0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0, graph0=None, genomes_list0=[]):
-        self.host_dict=host_dict0
-        self.guest_dict=guest_dict0
-        self.host_spot_dict=host_spot_dict0
+    def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0):
+        self.dict_of_hosts = dict_of_hosts0
+        self.dict_of_guests = dict_of_guests0
+        self.dict_of_host_spots = dict_of_host_spots0
+        self.dict_hosts_to_host_spots = dict_hosts_to_host_spots0
         self.population_size = population_size0
         self.tournament_size = tournament_size0
         self.elite_percent = elite_percent0
         self.mate_percent = mate_percent0
         self.mutation_percent = mutation_percent0
         
-        if graph0 is None:
-            self.graph = Graph(nodes0=self.host_spot_dict.keys()+[e.id_num for f e in guest_dict.values()])
-            for host_spot_id_num, host_spot in host_spot_dict.items():
-                host = self.host_dict[host_spot.host_id_num]
-                for guest_id_num, guest in self.guest_dict.items():
-                    if are_compatible(host,guest):
-                        self.graph.add_edge(host_spot_id_num,guest_id_num) # Edges are stored in (host_spot_id_num, guest_id_num) order
-        else:
-            self.graph=graph0
+        self.graph = Graph(nodes0=self.dict_of_host_spots.keys()+self.dict_of_guests.keys())
+        for host_spot_id_num, host_id_num in self.dict_of_host_spots.items():
+            # [are_compatible(self.dict_of_hosts[host_id_num],guest) for guest_id_num, guest in self.dict_of_guests.items()]
+            host = self.dict_of_hosts[host_id_num]
+            for guest_id_num, guest in self.dict_of_guests.items():
+                if are_compatible(host,guest):
+                    self.graph.add_edge(host_spot_id_num,guest_id_num) # Edges are stored in (host_spot_id_num, guest_id_num) order
         
-        self.genomes_list = None
-        num_new_genomes_needed=self.population_size-len(genomes_list0)
-        if num_new_genomes_needed<0:
-            print "Warning: The number of initializer genomes, which is "+str(len(genomes_list0))+", is larger than the population size, which is "+str(population_size)+"."
-            self.genomes_list = genomes_list0[:num_new_genomes_needed]
-        else:
-            self.genomes_list = genomes_list0+[Genome(self.host_dict, self.guest_dict, self.host_spot_dict, self.graph) for _ in xrange(num_new_genomes_needed)]
-    
+        self.genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size)]
+        
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \
-                '''host_dict0='''+self.host_dict.__repr__()+''', '''+ \
-                '''guest_dict0='''+self.guest_dict.__repr__()+''', '''+ \
-                '''host_spot_dict0='''+self.host_spot_dict.__repr__()+''', '''+ \
+                '''dict_of_hosts0='''+self.dict_of_hosts.__repr__()+''', '''+ \
+                '''dict_of_guests0='''+self.dict_of_guests.__repr__()+''', '''+ \
+                '''dict_of_host_spots0='''+self.dict_of_host_spots.__repr__()+''', '''+ \
                 '''population_size0='''+self.population_size.__repr__()+''', '''+ \
                 '''tournament_size0='''+self.tournament_size.__repr__()+''', '''+ \
                 '''elite_percent0='''+self.elite_percent.__repr__()+''', '''+ \

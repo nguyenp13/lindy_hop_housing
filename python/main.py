@@ -7,21 +7,25 @@ Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events
 To understand how to use this code, see the usage() function or use "python ga.py -usage" on the commandline. 
 
 TODO: 
-    Finish coding get_hosts_and_guests()
-
+    GeneticAlgorithm() code
+        create genomes class
+        create method for GeneticAlgorithm() to run one generation
+    Finish coding get_misc_info()
 '''
 
 import os
 import sys
 import pdb
 import time
+import GeneticAlgorithm
 from util import *
-from HostGuest import *
-#from ga import GeneticAlgorithm
 
 START_TIME=time.time()
 
-INPUT_XLSX_FILE_NAME_DEFAULT_VALUE = "cleaned_housing_data.xlsx"
+DEBUG = False
+EVENT_WE_ARE_HOUSING_FOR='RLX' # Value should be "The Process" or "RLX"
+
+INPUT_XLSX_FILE_NAME_DEFAULT_VALUE = "raw_housing_data.xlsx"
 POPULATION_SIZE_DEFAULT_VALUE = 25
 NUM_GENERATIONS_DEFAULT_VALUE = 500
 NUM_ISLANDS_DEFAULT_VALUE = 1
@@ -36,14 +40,16 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
     if os.path.isfile(previously_generated_data_file_name):
          with open(previously_generated_data_file_name,'r') as f:
             line=f.readlines()[0]
-            if 'host_dict, guest_dict, host_spot_dict=(' in line:
-                exec line
-                return host_dict, guest_dict, host_spot_dict
+            if 'dict_of_hosts, dict_of_guests, dict_of_host_spots=(' in line:
+                d = {}
+                exec line in globals(), d
+                return d['dict_of_hosts'], d['dict_of_guests'], d['dict_of_host_spots']
     
     workbook = xlrd.open_workbook(input_xlsx)
     sheet = workbook.sheet_by_index(index_of_sheet_containing_data)
     column_names = sheet.row_values(0)
     
+    time_registered_index = column_names.index("Time")
     first_name_index = column_names.index("Name (First)")
     last_name_index = column_names.index("Name (Last)")
     email_index = column_names.index("Email")
@@ -68,24 +74,27 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
     phone_number_index = column_names.index("Phone (Optional)")
     hometown_index = column_names.index("Hometown (Optional)")
     additional_comments_index = column_names.index("Additional Comments About Housing (Optional)")
+    preferred_housing_buddies_index = column_names.index("Preferred Housing Buddies")
     
-    host_dict=dict()
-    guest_dict=dict()
-    host_spot_dict=dict()
+    dict_of_hosts=dict()
+    dict_of_guests=dict()
+    dict_of_host_spots=dict()
+    dict_hosts_to_host_spots=dict()
     
     for rownum in xrange(1,sheet.nrows):
         line_data = sheet.row_values(rownum)
         if line_data[is_host_index]=="I live in Richmond and would be happy to host fellow Lindy Hoppers because I'm awesome!":
             # This person is a host
-            first_name = line_data[first_name_index]
-            last_name = line_data[last_name_index]
+            time_registered = line_data[time_registered_index]
+            first_name = line_data[first_name_index].strip()
+            last_name = line_data[last_name_index].strip()
             email = line_data[email_index]
             events_registered = [] # Currently, our data has no one who is registed for the Process, but not RLX
             if "Both RLX and The Process (save $10!)" in line_data[events_registered_index]:
                 events_registered += ["The Process", "RLX"]
             if "RLX 2016" in line_data[events_registered_index]:
                 events_registered += ["RLX"]
-            events_doing_housing = [] # Currently, our data has no one who housing people for the Process, but not RLX
+            events_doing_housing = [] # Currently, our data has no one who is housing people for the Process, but not RLX
             if "Both RLX and The Process!" in line_data[events_doing_housing_index]:
                 events_doing_housing += ["The Process", "RLX"]
             if "RLX 2016" in line_data[events_doing_housing_index]:
@@ -105,62 +114,58 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
             willing_to_house_smokers = 'Yes' in line_data[willing_to_house_smokers_index]
             has_cats = 'cats' in line_data[has_pets_index].lower()
             has_dogs = 'dogs' in line_data[has_pets_index].lower()
-            
             willing_to_provide_rides = 'Yes' in line_data[willing_to_provide_rides_index]
             phone_number = line_data[phone_number_index]
             hometown = line_data[hometown_index]
             additional_comments = line_data[additional_comments_index]
-                        
-            # map(p,[' ' *3*4+'print "%-30s %50s" % ("'+e[:e.index(' = ')]+'", str('+e[:e.index(' = ')]+'))' for e in t.split('\n')[1:-1]])
-            if True: # Debug Prints
-                print "%-30s %50s" % ("first_name", str(first_name))
-                print "%-30s %50s" % ("last_name", str(last_name))
-                print "%-30s %50s" % ("email", str(email))
-                print "%-30s %50s" % ("days_housing_is_available", str(days_housing_is_available))
-                print "%-30s %50s" % ("has_cats", str(has_cats))
-                print "%-30s %50s" % ("has_dogs", str(has_dogs))
-                print "%-30s %50s" % ("willing_to_house_smokers", str(willing_to_house_smokers))
-                print "%-30s %50s" % ("willing_to_provide_rides", str(willing_to_provide_rides))
-                print "%-30s %50s" % ("late_night_tendencies", str(late_night_tendencies))
-                print "%-30s %50s" % ("num_spots_available", str(num_spots_available))
-                print "%-30s %50s" % ("events_registered", str(events_registered))
-                print "%-30s %50s" % ("events_doing_housing", str(events_doing_housing))
-                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
-                print "%-30s %50s" % ("gender", str(gender))
-                print "%-30s %50s" % ("hosts_prefer_which_gender", str(hosts_prefer_which_gender))
-                print "%-30s %50s" % ("phone_number", str(phone_number))
-                print "%-30s %50s" % ("hometown", str(hometown))
-                print "%-30s %50s" % ("additional_comments", str(additional_comments))
+            preferred_housing_buddies = frozenset(map(lambda x: x.strip(), line_data[preferred_housing_buddies_index].split(',')))
             
-#            current_host_id_num=generate_unique_identifier()
-#            host_dict[current_host_id_num] = Host(
-#                    name0=name, 
-#                    email0='NO_EMAIL', 
-#                    phone_number0='', 
-#                    days_housing_is_available0=days_housing_is_available,
-#                    has_cats0=has_cats, 
-#                    has_dogs0=has_dogs,
-#                    willing_to_house_smokers0=willing_to_house_smokers, 
-#                    willing_to_provide_rides0=willing_to_provide_rides, 
-#                    late_night_tendencies0=late_night_tendencies, 
-#                    preferred_house_guests0=[], 
-#                    num_spots_available0=num_spots_available, 
-#                    misc_info0='', 
-#                    id_num0=current_host_id_num)
-#            for _ in xrange(num_spots_available):
-#                host_spot_id_num=generate_unique_identifier()
-#                host_spot_dict[host_spot_id_num](HostSpot(host_id_num0=current_host_id_num, host_spot_id_num0=host_spot_id_num))
+            current_host_id_num=rownum+1 # the +1 is to make sure the id_num matches the row number in the excel sheet
+            dict_of_hosts[current_host_id_num] = \
+                {
+                    "time_registered": time_registered, 
+                    "first_name": first_name, 
+                    "last_name": last_name, 
+                    "email": email, 
+                    "events_registered": events_registered, 
+                    "events_doing_housing": events_doing_housing, 
+                    "rlx_additional_comments": rlx_additional_comments, 
+                    "late_night_tendencies": late_night_tendencies, 
+                    "gender": gender, 
+                    "hosts_prefer_which_gender": hosts_prefer_which_gender, 
+                    "days_housing_is_available": days_housing_is_available, 
+                    "num_spots_available": num_spots_available, 
+                    "willing_to_house_smokers": willing_to_house_smokers, 
+                    "has_cats": has_cats, 
+                    "has_dogs": has_dogs, 
+                    "willing_to_provide_rides": willing_to_provide_rides, 
+                    "phone_number": phone_number, 
+                    "hometown": hometown, 
+                    "additional_comments": additional_comments, 
+                    "preferred_housing_buddies": preferred_housing_buddies, 
+                }
+            
+            # map(p,[' ' *3*4+'print "%-30s %50s" % ("'+e[:e.index(' = ')]+'", str('+e[:e.index(' = ')]+'))' for e in t.split('\n')[1:-1]])
+            if DEBUG: # Debug Prints
+                dict_pretty_print(dict_of_hosts[current_host_id_num])
+            
+            dict_hosts_to_host_spots[current_host_id_num] = []
+            for _ in xrange(num_spots_available):
+                host_spot_id_num=generate_unique_identifier()
+                dict_of_host_spots[host_spot_id_num] = current_host_id_num
+                dict_hosts_to_host_spots[current_host_id_num].append(host_spot_id_num)
         elif line_data[is_host_index]=="I will be traveling from out-of-town and would appreciate local housing.":
             # This person is a guest
-            first_name = line_data[first_name_index]
-            last_name = line_data[last_name_index]
+            time_registered = line_data[time_registered_index]
+            first_name = line_data[first_name_index].strip()
+            last_name = line_data[last_name_index].strip()
             email = line_data[email_index]
             events_registered = [] # Currently, our data has no one who is registed for the Process, but not RLX
             if "Both RLX and The Process (save $10!)" in line_data[events_registered_index]:
                 events_registered += ["The Process", "RLX"]
             if "RLX 2016" in line_data[events_registered_index]:
                 events_registered += ["RLX"]
-            events_needing_housing = [] # Currently, our data has no one who housing people for the Process, but not RLX
+            events_needing_housing = [] # Currently, our data has no one who is housing people for the Process, but not RLX
             if "Both RLX and The Process!" in line_data[events_needing_housing_index]:
                 events_needing_housing += ["The Process", "RLX"]
             if "RLX 2016" in line_data[events_needing_housing_index]:
@@ -183,65 +188,36 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
             phone_number = line_data[phone_number_index]
             hometown = line_data[hometown_index]
             additional_comments = line_data[additional_comments_index]
+            preferred_housing_buddies = frozenset(map(lambda x: x.strip(), line_data[preferred_housing_buddies_index].split(',')))
             
+            current_guest_id_num=rownum+1 # the +1 is to make sure the id_num matches the row number in the excel sheet
+            dict_of_guests[current_guest_id_num] = \
+                {
+                    "first_name": first_name, 
+                    "last_name": last_name, 
+                    "email": email, 
+                    "events_registered": events_registered, 
+                    "events_needing_housing": events_needing_housing, 
+                    "rlx_additional_comments": rlx_additional_comments, 
+                    "late_night_tendencies": late_night_tendencies, 
+                    "gender": gender, 
+                    "guests_prefer_which_gender": guests_prefer_which_gender, 
+                    "days_housing_is_needed": days_housing_is_needed, 
+                    "smokes": smokes, 
+                    "can_be_around_cats": can_be_around_cats, 
+                    "can_be_around_dogs": can_be_around_dogs, 
+                    "has_ride": has_ride, 
+                    "phone_number": phone_number, 
+                    "hometown": hometown, 
+                    "additional_comments": additional_comments, 
+                    "preferred_housing_buddies": preferred_housing_buddies, 
+                }
+                
             # map(p,[' ' *3*4+'print "%-30s %50s" % ("'+e[:e.index(' = ')]+'", str('+e[:e.index(' = ')]+'))' for e in t.split('\n')[1:-1]])
-            if True: # Debug Prints
-                print "%-30s %50s" % ("first_name", str(first_name))
-                print "%-30s %50s" % ("last_name", str(last_name))
-                print "%-30s %50s" % ("email", str(email))
-                print "%-30s %50s" % ("events_registered", str(events_registered))
-                print "%-30s %50s" % ("events_needing_housing", str(events_needing_housing))
-                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
-                print "%-30s %50s" % ("late_night_tendencies", str(late_night_tendencies))
-                print "%-30s %50s" % ("gender", str(gender))
-                print "%-30s %50s" % ("guests_prefer_which_gender", str(guests_prefer_which_gender))
-                print "%-30s %50s" % ("days_housing_is_needed", str(days_housing_is_needed))
-                print "%-30s %50s" % ("smokes", str(smokes))
-                print "%-30s %50s" % ("can_be_around_cats", str(can_be_around_cats))
-                print "%-30s %50s" % ("can_be_around_dogs", str(can_be_around_dogs))
-                print "%-30s %50s" % ("has_ride", str(has_ride))
-                print "%-30s %50s" % ("phone_number", str(phone_number))
-                print "%-30s %50s" % ("hometown", str(hometown))
-                print "%-30s %50s" % ("additional_comments", str(additional_comments))
+            if DEBUG: # Debug Prints
+                dict_pretty_print(dict_of_guests[current_guest_id_num])
             
-            pdb.set_trace()
-            
-#            current_guest_id_num=generate_unique_identifier()
-#            guest_dict[current_guest_id_num] = Guest(
-#                        name0=name, 
-#                        email0='NO_EMAIL', 
-#                        phone_number0='', 
-#                        days_housing_is_needed0=days_housing_is_needed,
-#                        can_be_around_cats0=can_be_around_cats, 
-#                        can_be_around_dogs0=can_be_around_dogs, 
-#                        smokes0=smokes, 
-#                        has_ride0=has_ride, 
-#                        late_night_tendencies0=late_night_tendencies, 
-#                        preferred_house_guests0=[], 
-#                        misc_info0='', 
-#                        id_num0=generate_unique_identifier()
-#                    )
-#    
-#    # Generate random preferred house guests
-#    for host in random.sample(host_dict.values(), int(len(host_dict.values())*0.4)): # Let's say 40% of the hosts prefer guests
-#        for guest in random.sample(guest_dict.values(), 6): # Let's say the host prefers 6 guests
-#            host.preferred_house_guests.append(guest.id_num)
-#    
-#    for guest in random.sample(guest_dict.values(),int(len(guest_dict.values())*0.4)): # Let's say 40% of the guests prefer co-guests
-#        for preferred_guest0 in random.sample(guest_dict.values(),4): # Let's say the guest prefers 4 co-guests
-#            preferred_guest_id_num=preferred_guest0.id_num
-#            while preferred_guest_id_num==guest.id_num: # This may seem slow and round about, but the probability we take this branch is very low. Using random.sample once is faster than using random.choice in every iteration of a for loop. Thus, this leads to faster run time. 
-#                preferred_guest_id_num=random.choice(guest_dict.values()).id_num
-#            guest.preferred_house_guests.append(preferred_guest_id_num)
-#    
-#    for guest in random.sample(guest_dict.values(),int(len(guest_dict.values())*0.4)): # Let's say 40% of the guests prefer hosts
-#        for preferred_host in random.sample(host_dict.values(),3): # Let's say the guest prefers 3 hosts
-#            guest.preferred_house_guests.append(preferred_host.id_num)
-#    
-#    with open(previously_generated_data_file_name,'w') as f:
-#        f.write('host_dict, guest_dict, host_spot_dict=('+host_dict.__repr__()+', '+guest_dict.__repr__()+', '+host_spot_dict.__repr__()+')')
-#    
-#    return host_dict, guest_dict, host_spot_dict
+    return dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots 
 
 def usage(): 
     # Example Usage: python ga.py -population_size 100 -num_generations 100 -output_dir ./output
@@ -305,14 +281,14 @@ def main():
     print "    output_dir:", output_dir
     print 
     
-    host_dict, guest_dict, host_spot_dict = get_hosts_and_guests(input_xlsx_file_name)
+    dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots  = get_hosts_and_guests(input_xlsx_file_name)
     
     print "Housing data has been parsed."
-    print "    Number of Hosts: "+str(len(host_dict))
-    print "    Number of Spots for Guests: "+str(len(host_spot_dict))
-    print "    Number of Guests: "+str(len(guest_dict))
+    print "    Number of Hosts: "+str(len(dict_of_hosts))
+    print "    Number of Spots for Guests: "+str(len(dict_of_host_spots))
+    print "    Number of Guests: "+str(len(dict_of_guests))
     
-#    ga = GeneticAlgorithm(host_dict, guest_dict, host_spot_dict, population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
+    ga = GeneticAlgorithm.GeneticAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
     
     print 
     print 'Total Run Time: '+str(time.time()-START_TIME)
