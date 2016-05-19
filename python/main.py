@@ -10,9 +10,6 @@ TODO:
     GeneticAlgorithm() code
         create genomes class
         create method for GeneticAlgorithm() to run one generation
-    Finish coding get_misc_info()
-        ride needs not met
-        gender preferences not met
 '''
 
 import os
@@ -38,14 +35,6 @@ MUTATION_PERCENT_DEFAULT_VALUE = 10
 OUTPUT_DIR_DEFAULT_VALUE = './output'
 
 def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containing_data=0):
-    previously_generated_data_file_name = remove_file_extension(input_xlsx+'_parsed.py')
-    if os.path.isfile(previously_generated_data_file_name):
-         with open(previously_generated_data_file_name,'r') as f:
-            line=f.readlines()[0]
-            if 'dict_of_hosts, dict_of_guests, dict_of_host_spots=(' in line:
-                d = {}
-                exec line in globals(), d
-                return d['dict_of_hosts'], d['dict_of_guests'], d['dict_of_host_spots']
     
     workbook = xlrd.open_workbook(input_xlsx)
     sheet = workbook.sheet_by_index(index_of_sheet_containing_data)

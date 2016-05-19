@@ -86,9 +86,11 @@ class Genome(object):
         ans = {}
         ans["P_value"] = self.get_P_value()
         ans["N_value"] = self.get_N_value()
-        ans["host_actively_prefers_gender_of_guest"]=0
-        ans["guest_actively_prefers_gender_of_coguests"]=0
-        ans["guest_can_get_needed_rides_from_host"]=0
+
+        ans["host_actively_prefers_to_house_guest_of_a_different_gender"]=0
+        ans["guest_actively_prefers_to_be_housed_with_host_of_a_different_gender"]=0
+        ans["guest_actively_prefers_to_be_housed_with_coguest_of_a_different_gender"]=0
+        ans["guest_CANNOT_get_needed_rides_from_host"]=0
         
         ans["host_guest_late_night_tendencies_match"]=0
         ans["host_guest_early_sleeper_some_late_night_mismatch"]=0
@@ -111,12 +113,12 @@ class Genome(object):
             host = self.dict_of_hosts[host_id_num]
             guest = self.dict_of_guests[guest_id_num]
             id_nums_of_all_guests_staying_with_host = dict_host_to_list_of_guest_id_nums[host_id_num]
-            # If a person prefers either, then the person doesn't ACTIVELY prefer any gender
-            if (host["hosts_prefer_which_gender"]==guest["gender"]):
-                ans["host_actively_prefers_gender_of_guest"]+=1
-            if host["willing_to_provide_rides"] and not guest["has_ride"]: 
-                # True only if the guest ACTIVELY NEEDS a ride and host can provide rides
-                ans["guest_can_get_needed_rides_from_host"]+=1
+            if (host["hosts_prefer_which_gender"]!=guest["gender"] and "Either"!=host["hosts_prefer_which_gender"]):
+                ans["host_actively_prefers_to_house_guest_of_a_different_gender"]+=1
+            if (guest["guests_prefer_which_gender"]!=host["gender"] and "Either"!=guest["guests_prefer_which_gender"]):
+                ans["guest_actively_prefers_to_be_housed_with_host_of_a_different_gender"]+=1
+            if not guest["has_ride"] and not host["willing_to_provide_rides"]: 
+                ans["guest_CANNOT_get_needed_rides_from_host"]+=1
             # Late Night Tendencies Matching
             host_late_night_tendencies = host["late_night_tendencies"]
             guest_late_night_tendencies = guest["late_night_tendencies"]
@@ -138,8 +140,8 @@ class Genome(object):
                     continue
                 # gender preferences
                 coguest_gender = self.dict_of_guests[g_id_num]['gender']
-                if guest["guests_prefer_which_gender"]==coguest_gender:
-                    ans["guest_actively_prefers_gender_of_coguests"]+=1
+                if guest["guests_prefer_which_gender"]!=coguest_gender and "Either"!=guest["guests_prefer_which_gender"]:
+                    ans["guest_actively_prefers_to_be_housed_with_coguest_of_a_different_gender"]+=1
                 # guest and co-guests matching
                 other_guest_preference = self.dict_of_guests[g_id_num]["late_night_tendencies"]
                 guest_other_guest_late_night_tendencies_tuple = (other_guest_preference, guest_late_night_tendencies)
@@ -405,9 +407,9 @@ class GeneticAlgorithm(object):
         
         self.genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size)]
         
-#        for g in self.genomes_list:
-#            dict_pretty_print(g.get_misc_info())
-#            print map(lambda x: str(self.dict_of_hosts[self.dict_of_host_spots[x[0]]]["first_name"])+(self.dict_of_guests[x[1]]["first_name"]), sorted(g.chosen_edges))
+        for g in self.genomes_list:
+            dict_pretty_print(g.get_misc_info())
+            print map(lambda x: str(self.dict_of_hosts[self.dict_of_host_spots[x[0]]]["first_name"])+(self.dict_of_guests[x[1]]["first_name"]), sorted(g.chosen_edges))
 #        pdb.set_trace()
         
     def __repr__(self):
