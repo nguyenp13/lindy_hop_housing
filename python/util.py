@@ -105,6 +105,11 @@ def assertion(condition, message, error_code=1):
             sys.exit(error_code)
 
 def dict_pretty_print(d):
+    max_k_len = 30
+    max_v_len = 50    
     for k,v in d.items():
-        print "%-30s %50s" % (str(k), str(v))
-
+        max_k_len = max(max_k_len, len(str(k)))
+#        max_v_len = max(max_v_len, len(str(v)))
+    for k,v in sorted(d.items()):
+        print ("%-"+str(max_k_len)+"s %"+str(max_v_len)+"s") % (str(k), str(v))
+    print 

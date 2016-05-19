@@ -11,6 +11,8 @@ TODO:
         create genomes class
         create method for GeneticAlgorithm() to run one generation
     Finish coding get_misc_info()
+        ride needs not met
+        gender preferences not met
 '''
 
 import os
@@ -146,7 +148,25 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                 }
             
             if DEBUG: # Debug Prints
-                dict_pretty_print(dict_of_hosts[current_host_id_num])
+                print "%-30s %50s" % ("first_name", str(first_name))
+                print "%-30s %50s" % ("last_name", str(last_name))
+                print "%-30s %50s" % ("email", str(email))
+                print "%-30s %50s" % ("days_housing_is_available", str(days_housing_is_available))
+                print "%-30s %50s" % ("has_cats", str(has_cats))
+                print "%-30s %50s" % ("has_dogs", str(has_dogs))
+                print "%-30s %50s" % ("willing_to_house_smokers", str(willing_to_house_smokers))
+                print "%-30s %50s" % ("willing_to_provide_rides", str(willing_to_provide_rides))
+                print "%-30s %50s" % ("late_night_tendencies", str(late_night_tendencies))
+                print "%-30s %50s" % ("num_spots_available", str(num_spots_available))
+                print "%-30s %50s" % ("events_registered", str(events_registered))
+                print "%-30s %50s" % ("events_doing_housing", str(events_doing_housing))
+                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
+                print "%-30s %50s" % ("gender", str(gender))
+                print "%-30s %50s" % ("hosts_prefer_which_gender", str(hosts_prefer_which_gender))
+                print "%-30s %50s" % ("phone_number", str(phone_number))
+                print "%-30s %50s" % ("hometown", str(hometown))
+                print "%-30s %50s" % ("additional_comments", str(additional_comments))
+                print 
             
             dict_hosts_to_host_spots[current_host_id_num] = []
             for _ in xrange(num_spots_available):
@@ -213,7 +233,24 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                 }
                 
             if DEBUG: # Debug Prints
-                dict_pretty_print(dict_of_guests[current_guest_id_num])
+                print "%-30s %50s" % ("first_name", str(first_name))
+                print "%-30s %50s" % ("last_name", str(last_name))
+                print "%-30s %50s" % ("email", str(email))
+                print "%-30s %50s" % ("events_registered", str(events_registered))
+                print "%-30s %50s" % ("events_needing_housing", str(events_needing_housing))
+                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
+                print "%-30s %50s" % ("late_night_tendencies", str(late_night_tendencies))
+                print "%-30s %50s" % ("gender", str(gender))
+                print "%-30s %50s" % ("guests_prefer_which_gender", str(guests_prefer_which_gender))
+                print "%-30s %50s" % ("days_housing_is_needed", str(days_housing_is_needed))
+                print "%-30s %50s" % ("smokes", str(smokes))
+                print "%-30s %50s" % ("can_be_around_cats", str(can_be_around_cats))
+                print "%-30s %50s" % ("can_be_around_dogs", str(can_be_around_dogs))
+                print "%-30s %50s" % ("has_ride", str(has_ride))
+                print "%-30s %50s" % ("phone_number", str(phone_number))
+                print "%-30s %50s" % ("hometown", str(hometown))
+                print "%-30s %50s" % ("additional_comments", str(additional_comments))
+                print 
             
     return dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots 
 
@@ -222,6 +259,9 @@ def usage():
     print >> sys.stderr, 'Usage: python '+__file__+' <options>'
     print >> sys.stderr, ''
     print >> sys.stderr, 'Options:'
+    print >> sys.stderr, ''
+    print >> sys.stderr, '    -input_xlsx_file_name <string>'
+    print >> sys.stderr, '        Spreadsheet file name for housing data. Default value is "'+INPUT_XLSX_FILE_NAME_DEFAULT_VALUE+'".'
     print >> sys.stderr, ''
     print >> sys.stderr, '    -population_size <int>'
     print >> sys.stderr, '        Number of genomes per generation. Default value is '+str(POPULATION_SIZE_DEFAULT_VALUE)+'.'
@@ -255,7 +295,7 @@ def main():
     if len(sys.argv) < 1 or '-usage' in sys.argv: 
         usage()
     
-    input_xlsx_file_name = get_command_line_param_val_default_value(sys.argv, '-mutation_percent', INPUT_XLSX_FILE_NAME_DEFAULT_VALUE)
+    input_xlsx_file_name = get_command_line_param_val_default_value(sys.argv, '-input_xlsx_file_name', INPUT_XLSX_FILE_NAME_DEFAULT_VALUE)
     population_size = int(get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE))
     num_generations = int(get_command_line_param_val_default_value(sys.argv, '-num_generations', NUM_GENERATIONS_DEFAULT_VALUE))
     num_islands = int(get_command_line_param_val_default_value(sys.argv, '-num_islands', NUM_ISLANDS_DEFAULT_VALUE))

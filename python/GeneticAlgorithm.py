@@ -75,7 +75,6 @@ class Genome(object):
             guest_prefers_these_housing_buddies = guest["preferred_housing_buddies"]
             id_nums_of_all_guests_staying_with_host = dict_host_to_list_of_guest_id_nums[host_id_num]
             names_of_all_guests_staying_with_host = [self.dict_of_guests[g_id_num]['first_name']+' '+self.dict_of_guests[g_id_num]['last_name'] for g_id_num in id_nums_of_all_guests_staying_with_host]
-            genders_of_all_guests_staying_with_host = [self.dict_of_guests[g_id_num]['gender'] for g_id_num in id_nums_of_all_guests_staying_with_host]
             if host_name in guest_prefers_these_housing_buddies: # guest prefers host
                 P += 1
             if guest_name in host_prefers_these_housing_buddies: # host prefers guest
@@ -112,42 +111,48 @@ class Genome(object):
             host = self.dict_of_hosts[host_id_num]
             guest = self.dict_of_guests[guest_id_num]
             id_nums_of_all_guests_staying_with_host = dict_host_to_list_of_guest_id_nums[host_id_num]
-            genders_of_all_guests_staying_with_host = [self.dict_of_guests[g_id_num]['gender'] for g_id_num in id_nums_of_all_guests_staying_with_host]
             # If a person prefers either, then the person doesn't ACTIVELY prefer any gender
             if (host["hosts_prefer_which_gender"]==guest["gender"]):
                 ans["host_actively_prefers_gender_of_guest"]+=1
-            for coguest_gender in genders_of_all_guests_staying_with_host:
-                if guest["guests_prefer_which_gender"]==coguest_gender:
-                    ans["guest_actively_prefers_gender_of_coguests"]+=1
             if host["willing_to_provide_rides"] and not guest["has_ride"]: 
                 # True only if the guest ACTIVELY NEEDS a ride and host can provide rides
                 ans["guest_can_get_needed_rides_from_host"]+=1
             # Late Night Tendencies Matching
             host_late_night_tendencies = host["late_night_tendencies"]
             guest_late_night_tendencies = guest["late_night_tendencies"]
+            host_guest_late_night_tendencies_tuple = (host_late_night_tendencies, guest_late_night_tendencies)
+            # guest host matching
             if host_late_night_tendencies == guest_late_night_tendencies:
                 ans["host_guest_late_night_tendencies_match"]+=1
-            if "early sleeper" in (host_late_night_tendencies, guest_late_night_tendencies):
-                if "some late night" in (host_late_night_tendencies, guest_late_night_tendencies): 
+            if "early sleeper" in host_guest_late_night_tendencies_tuple:
+                if "some late night" in host_guest_late_night_tendencies_tuple: 
                     ans["host_guest_early_sleeper_some_late_night_mismatch"]+=1
-            if "survivors' club" in (host_late_night_tendencies, guest_late_night_tendencies): 
-                if "early sleeper" in (host_late_night_tendencies, guest_late_night_tendencies):
+            if "survivors' club" in host_guest_late_night_tendencies_tuple: 
+                if "early sleeper" in host_guest_late_night_tendencies_tuple:
                     ans["host_guest_early_sleeper_survivors_club_mismatch"]+=1
-            if "some late night" in (host_late_night_tendencies, guest_late_night_tendencies):
-                if "survivors' club" in (host_late_night_tendencies, guest_late_night_tendencies): 
+            if "some late night" in host_guest_late_night_tendencies_tuple:
+                if "survivors' club" in host_guest_late_night_tendencies_tuple: 
                     ans["host_guest_some_late_survivors_club_mismatch"]+=1
             for g_id_num in id_nums_of_all_guests_staying_with_host:
+                if g_id_num == guest_id_num:
+                    continue
+                # gender preferences
+                coguest_gender = self.dict_of_guests[g_id_num]['gender']
+                if guest["guests_prefer_which_gender"]==coguest_gender:
+                    ans["guest_actively_prefers_gender_of_coguests"]+=1
+                # guest and co-guests matching
                 other_guest_preference = self.dict_of_guests[g_id_num]["late_night_tendencies"]
+                guest_other_guest_late_night_tendencies_tuple = (other_guest_preference, guest_late_night_tendencies)
                 if other_guest_preference == guest_late_night_tendencies:
                     ans["coguest_late_night_tendencies_match"]+=1
-                if "early sleeper" in (other_guest_preference, guest_late_night_tendencies):
-                    if "some late night" in (other_guest_preference, guest_late_night_tendencies): 
+                if "early sleeper" in guest_other_guest_late_night_tendencies_tuple:
+                    if "some late night" in guest_other_guest_late_night_tendencies_tuple: 
                         ans["coguest_early_sleeper_some_late_night_mismatch"]+=1
-                if "survivors' club" in (other_guest_preference, guest_late_night_tendencies): 
-                    if "early sleeper" in (other_guest_preference, guest_late_night_tendencies):
+                if "survivors' club" in guest_other_guest_late_night_tendencies_tuple: 
+                    if "early sleeper" in guest_other_guest_late_night_tendencies_tuple:
                         ans["coguest_early_sleeper_survivors_club_mismatch"]+=1
-                if "some late night" in (other_guest_preference, guest_late_night_tendencies):
-                    if "survivors' club" in (other_guest_preference, guest_late_night_tendencies): 
+                if "some late night" in guest_other_guest_late_night_tendencies_tuple:
+                    if "survivors' club" in guest_other_guest_late_night_tendencies_tuple: 
                         ans["coguest_some_late_survivors_club_mismatch"]+=1
         return ans
         
@@ -399,6 +404,11 @@ class GeneticAlgorithm(object):
                     self.graph.add_edge(host_spot_id_num,guest_id_num) # Edges are stored in (host_spot_id_num, guest_id_num) order
         
         self.genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size)]
+        
+#        for g in self.genomes_list:
+#            dict_pretty_print(g.get_misc_info())
+#            print map(lambda x: str(self.dict_of_hosts[self.dict_of_host_spots[x[0]]]["first_name"])+(self.dict_of_guests[x[1]]["first_name"]), sorted(g.chosen_edges))
+#        pdb.set_trace()
         
     def __repr__(self):
         ans = ''+ \
