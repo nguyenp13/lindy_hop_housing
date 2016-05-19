@@ -107,3 +107,4 @@ def assertion(condition, message, error_code=1):
 def dict_pretty_print(d):
     for k,v in d.items():
         print "%-30s %50s" % (str(k), str(v))
+

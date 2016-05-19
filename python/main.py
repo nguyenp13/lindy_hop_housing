@@ -145,7 +145,6 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                     "preferred_housing_buddies": preferred_housing_buddies, 
                 }
             
-            # map(p,[' ' *3*4+'print "%-30s %50s" % ("'+e[:e.index(' = ')]+'", str('+e[:e.index(' = ')]+'))' for e in t.split('\n')[1:-1]])
             if DEBUG: # Debug Prints
                 dict_pretty_print(dict_of_hosts[current_host_id_num])
             
@@ -213,7 +212,6 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                     "preferred_housing_buddies": preferred_housing_buddies, 
                 }
                 
-            # map(p,[' ' *3*4+'print "%-30s %50s" % ("'+e[:e.index(' = ')]+'", str('+e[:e.index(' = ')]+'))' for e in t.split('\n')[1:-1]])
             if DEBUG: # Debug Prints
                 dict_pretty_print(dict_of_guests[current_guest_id_num])
             
