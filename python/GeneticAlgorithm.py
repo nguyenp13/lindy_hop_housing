@@ -1,5 +1,6 @@
 
 import main 
+import time
 from util import *
 
 class Graph(object): 
@@ -194,9 +195,9 @@ class Genome(object):
                 ans += "\n"
             guest_to_guest_preferences[guest_name] = guest["preferred_housing_buddies"]
             if host_name in guest["preferred_housing_buddies"]:
-                set_of_preferences.add(host_name+' prefers '+guest_name+'.\n')
-            if guest_name in host["preferred_housing_buddies"]:
                 set_of_preferences.add(guest_name+' prefers '+host_name+'.\n')
+            if guest_name in host["preferred_housing_buddies"]:
+                set_of_preferences.add(host_name+' prefers '+guest_name+'.\n')
             ans += "    Guest: "+guest_name+"\n"
             ans += "    Guest Email: "+guest['email']+"\n"
             ans += "    Guest Hometown: "+guest['hometown']+"\n"
@@ -206,7 +207,36 @@ class Genome(object):
                 if g1_name in g2_buddies:
                     set_of_preferences.add(g2_name+' prefers '+g1_name+'.\n')
         ans += ''.join(sorted(list(set_of_preferences)))
-        ans += '\n'+'='*88
+        unhoused_guest_id_nums = []
+        unclaimed_host_spot_id_nums = []
+        claimed_host_spot_id_nums, chosen_guest_id_nums = zip(*(self.chosen_edges))
+        for guest_id_num in self.dict_of_guests.keys():
+            if guest_id_num not in chosen_guest_id_nums:
+                unhoused_guest_id_nums.append(guest_id_num)
+        for host_spot_id_num in self.dict_of_host_spots.keys():
+            if host_spot_id_num not in claimed_host_spot_id_nums:
+                unclaimed_host_spot_id_nums.append(host_spot_id_num)
+        ans += '\n'
+        ans += '-'*50
+        ans += '\n'
+        ans += '\n'
+        ans += 'Unhoused Guests:\n'
+        for unhoused_guest_id_num in unhoused_guest_id_nums:
+            unhoused_guest = self.dict_of_guests[unhoused_guest_id_num]
+            unhoused_guest_name = unhoused_guest['first_name']+' '+unhoused_guest['last_name']
+            ans += '    '+unhoused_guest_name+'\n' 
+        ans += '\n'
+        ans += '-'*50
+        ans += '\n'
+        ans += 'Unclaimed Host Spots:\n'
+        for unclaimed_host_spot_id_num in unclaimed_host_spot_id_nums:
+            host_with_unclaimed_spot_id_num = self.dict_of_host_spots[unclaimed_host_spot_id_num]
+            host_with_unclaimed_spot = self.dict_of_hosts[host_with_unclaimed_spot_id_num]
+            host_with_unclaimed_spot_name = host_with_unclaimed_spot['first_name']+' '+host_with_unclaimed_spot['last_name']
+            ans += '    '+host_with_unclaimed_spot_name+'\n' 
+        ans += '\n'
+        ans += '='*88
+        ans += '\n'
         return ans
     
 def mate(parent_1, parent_2):
@@ -292,7 +322,12 @@ class GeneticAlgorithm(object):
         return [(e[1],e[2]) for e in self.genomes_and_scores_list] 
     
     def run_for_x_generations(self, num_generations=1):
+        start_time=time.time()
         for generation_index in xrange(num_generations):
+            display_update_text = (time.time()-start_time>1)
+            if display_update_text:
+                start_time = time.time()
+                print "Working on generation %d." % generation_index
             num_new_elites = int(self.elite_percent*self.population_size)
             num_new_children = int(self.mate_percent*self.population_size)
             num_new_mutations = int(self.mutation_percent*self.population_size)
@@ -342,6 +377,11 @@ class GeneticAlgorithm(object):
                 new_genome.fill_edges()
                 new_genomes_and_scores_list.append((new_genome, new_genome.get_N_value(), new_genome.get_P_value()))
             self.genomes_and_scores_list = new_genomes_and_scores_list
+            NP_values = self.get_N_P_values()
+            if display_update_text:
+                print "Max N:", max(NP_values, key=lambda x:x[0])
+                print "Max P:", max(NP_values, key=lambda x:x[1])
+                print 
     
     def __repr__(self):
         ans = ''+ \
@@ -355,7 +395,7 @@ class GeneticAlgorithm(object):
                 '''mate_percent0='''+self.mate_percent.__repr__()+''', '''+ \
                 '''mutation_percent0='''+self.mutation_percent.__repr__()+''', '''+ \
                 '''graph0='''+self.graph.__repr__()+''', '''+ \
-                '''genomes_list0='''+([e[0] for e in self.self.genomes_and_scores_list]).__repr__()+''', '''+ \
+                '''genomes_list0='''+([e[0] for e in self.genomes_and_scores_list]).__repr__()+''', '''+ \
             ''')'''
         return ans
 

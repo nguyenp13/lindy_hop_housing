@@ -21,8 +21,8 @@ DEBUG = False
 EVENT_WE_ARE_HOUSING_FOR='RLX' # Value should be "The Process" or "RLX"
 
 INPUT_XLSX_FILE_NAME_DEFAULT_VALUE = "raw_housing_data.xlsx"
-POPULATION_SIZE_DEFAULT_VALUE = 25
-NUM_GENERATIONS_DEFAULT_VALUE = 500
+POPULATION_SIZE_DEFAULT_VALUE = 100
+NUM_GENERATIONS_DEFAULT_VALUE = 10
 NUM_ISLANDS_DEFAULT_VALUE = 1
 TOURNAMENT_SIZE_DEFAULT_VALUE = 32
 ELITE_PERCENT_DFAULT_VALUE = 80
@@ -310,13 +310,16 @@ def main():
     print "    Number of Hosts: "+str(len(dict_of_hosts))
     print "    Number of Spots for Guests: "+str(len(dict_of_host_spots))
     print "    Number of Guests: "+str(len(dict_of_guests))
+    print 
     
     ga = GeneticAlgorithm.GeneticAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
     
     ga.run_for_x_generations(num_generations)
     
-    g = ga.get_genomes_list()[-1]
-    print g.get_assignments_string()
+    # The housing assigment for the genome with the largest P 
+    g, _, _ = max(ga.genomes_and_scores_list, key=lambda x:x[2])
+    with open('./result.txt','w') as f:
+        f.write(g.get_assignments_string()) 
     
     print 
     print 'Total Run Time: '+str(time.time()-START_TIME) 
