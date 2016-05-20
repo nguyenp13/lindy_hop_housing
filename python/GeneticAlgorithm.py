@@ -51,7 +51,7 @@ class Genome(object):
         self.fill_edges()
     
     def get_clone(self):
-        return Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.graph, self.chosen_edges)
+        return Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph, self.chosen_edges)
     
     def get_N_value(self):
         return len(self.chosen_edges)
@@ -170,13 +170,11 @@ def mate(parent_1, parent_2):
         for i, edge in enumerate(edges_1[starting_index_1:]):
             if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
                 child.chosen_edges.append(edge)
-                print "edge from parent 1", edge
                 break
         starting_index_1+=1+i
         for i, edge in enumerate(edges_2[starting_index_2:]):
             if edge[0] not in [e[0] for e in child.chosen_edges] and edge[1] not in [e[1] for e in child.chosen_edges]:
                 child.chosen_edges.append(edge)
-                print "edge from parent 2", edge
                 break
         starting_index_2+=1+i
     child.fill_edges()
@@ -233,6 +231,9 @@ class GeneticAlgorithm(object):
         genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size-len(genomes_list0))]+genomes_list0
         self.genomes_and_scores_list = [(g, g.get_N_value(), g.get_P_value()) for g in genomes_list]
     
+    def get_N_P_values(self):
+        return [(e[1],e[2]) for e in self.genomes_and_scores_list] 
+    
     def run_for_x_generations(self, num_generations=1):
         for generation_index in xrange(num_generations):
             num_new_elites = int(self.elite_percent*self.population_size)
@@ -241,7 +242,7 @@ class GeneticAlgorithm(object):
             
             new_genomes_and_scores_list = []
             for e in random.sample(self.genomes_and_scores_list, num_new_mutations):
-                mutation = e[0].clone()
+                mutation = e[0].get_clone()
                 mutation.mutate()
                 new_genomes_and_scores_list.append((mutation,mutation.get_N_value(),mutation.get_P_value()))
             for _ in xrange(num_new_children):
@@ -250,16 +251,17 @@ class GeneticAlgorithm(object):
                 parent_2 = parents_and_scores[1][0]
                 child = mate(parent_1, parent_2)
                 new_genomes_and_scores_list.append((child, child.get_N_value(), child.get_P_value()))
-            self.genomes_and_scores_list.sort(key=lambda x:-x[0]) # now sorted from biggest to smallest N
+            self.genomes_and_scores_list.sort(key=lambda x:x[2]) # sort from smallest to biggest P, secondary key
+            self.genomes_and_scores_list.sort(key=lambda x:-x[1]) # sort from biggest to smallest N
             num_genomes_with_pareto_score=0
             current_pareto_score=0
-            prev_P = -inf
-            while num_genomes_with_pareto_score<len(self.genomes_and_scores_list): # Get Pareto Scores 
-                for index in enumerate(self.genomes_and_scores_list):
+            while num_genomes_with_pareto_score<self.population_size: # Get Pareto Scores 
+                prev_P = -inf
+                for index in xrange(len(self.genomes_and_scores_list)):
+                    genome_and_scores = self.genomes_and_scores_list[index]
                     # We store the pareto score in the 4th box of the tuple
                     if len(genome_and_scores)>3:
                         continue
-                    genome_and_scores[index]
                     genome = genome_and_scores[0]
                     current_N = genome_and_scores[1]
                     current_P = genome_and_scores[2]
@@ -268,10 +270,20 @@ class GeneticAlgorithm(object):
                         self.genomes_and_scores_list[index] = (genome, current_N, current_P, current_pareto_score) 
                         num_genomes_with_pareto_score+=1
                 current_pareto_score+=1
+#            print '\n'*3
             for _ in xrange(num_new_elites):
                 tournament_indices = random.sample(range(len(self.genomes_and_scores_list)), min(self.tournament_size, len(self.genomes_and_scores_list)))
-                tournament_winner, tournament_winner_index = max(([self.genomes_and_scores_list[i],i) for i in tournament_indices], lambda x:x[0][3])
+                tournament_participants = [self.genomes_and_scores_list[i] for i in tournament_indices]
+                tournament_participants_and_indices = zip(tournament_participants, tournament_indices)
+                tournament_participants_and_indices.sort(key=lambda x:-x[0][2]) # Sort by biggest to smallest P value, secondary key
+                tournament_participants_and_indices.sort(key=lambda x:x[0][3]) # Sort by smallest to biggest Pareto Rank
+                tournament_winner, tournament_winner_index = min(tournament_participants_and_indices, key=lambda x:x[0][3])
+#                print "All Genomes:", map(lambda x:x[1:], self.genomes_and_scores_list)
+#                print "Participants:", map(lambda x:x[1:], tournament_participants)
+#                print "Winner:", tournament_winner[1:]
+#                print "Index:", tournament_winner_index
                 new_genomes_and_scores_list.append(self.genomes_and_scores_list.pop(tournament_winner_index)[:3])
+#                print "New List:", map(lambda x:x[1:], new_genomes_and_scores_list)
             while len(new_genomes_and_scores_list) < self.population_size: 
                 # we're going to add random genomes until we meet the population size
                 new_genome = new_genomes_and_scores_list[0][0].get_clone()
@@ -279,7 +291,7 @@ class GeneticAlgorithm(object):
                 new_genome.fill_edges()
                 new_genomes_and_scores_list.append((new_genome, new_genome.get_N_value(), new_genome.get_P_value()))
             self.genomes_and_scores_list = new_genomes_and_scores_list
-        
+#            print "Final Genomes:", sorted(map(lambda x:x[1:], self.genomes_and_scores_list),key=lambda x:x[1])
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \
