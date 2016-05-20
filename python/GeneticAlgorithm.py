@@ -363,7 +363,7 @@ class GeneticAlgorithm(object):
             self.genomes_and_scores_list.sort(key=lambda x:-x[1]) # sort from biggest to smallest N
             num_genomes_with_pareto_score=0
             current_pareto_score=0
-            while num_genomes_with_pareto_score<self.population_size: # Get Pareto Scores 
+            while num_genomes_with_pareto_score<len(self.genomes_and_scores_list): # Get Pareto Scores 
                 prev_P = -inf
                 for index in xrange(len(self.genomes_and_scores_list)):
                     genome_and_scores = self.genomes_and_scores_list[index]
@@ -391,7 +391,7 @@ class GeneticAlgorithm(object):
                 if potential_new_genome_and_score not in new_genomes_and_scores_list:
                     new_genomes_and_scores_list.append(potential_new_genome_and_score) # We don't want a bunch of copies of the same genome in the population 
             if current_max_P == prev_max_P:
-                self.population_size += 1
+                self.population_size += 10
             elif self.population_size > self.population_size_original:
                 if self.population_size - self.population_size_original < 10:
                     self.population_size = self.population_size_original
