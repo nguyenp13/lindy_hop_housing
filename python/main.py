@@ -22,12 +22,12 @@ EVENT_WE_ARE_HOUSING_FOR='RLX' # Value should be "The Process" or "RLX"
 
 INPUT_XLSX_FILE_NAME_DEFAULT_VALUE = "raw_housing_data.xlsx"
 POPULATION_SIZE_DEFAULT_VALUE = 100
-NUM_GENERATIONS_DEFAULT_VALUE = 10
+NUM_GENERATIONS_DEFAULT_VALUE = 100
 NUM_ISLANDS_DEFAULT_VALUE = 1
 TOURNAMENT_SIZE_DEFAULT_VALUE = 32
-ELITE_PERCENT_DFAULT_VALUE = 80
-MATE_PERCENT_DEFAULT_VALUE = 10
-MUTATION_PERCENT_DEFAULT_VALUE = 10
+ELITE_PERCENT_DFAULT_VALUE = 50
+MATE_PERCENT_DEFAULT_VALUE = 20
+MUTATION_PERCENT_DEFAULT_VALUE = 30
 OUTPUT_DIR_DEFAULT_VALUE = './output'
 
 def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containing_data=0):
@@ -254,9 +254,6 @@ def usage():
     print >> sys.stderr, '    -num_generations <int>'
     print >> sys.stderr, '        Number of generations. Default value is '+str(NUM_GENERATIONS_DEFAULT_VALUE)+'.'
     print >> sys.stderr, ''
-    print >> sys.stderr, '    -num_islands <int>'
-    print >> sys.stderr, '        Number of islands. Default value is '+str(NUM_ISLANDS_DEFAULT_VALUE)+'.'
-    print >> sys.stderr, ''
     print >> sys.stderr, '    -tournament_size <int>'
     print >> sys.stderr, '        Tournament size. Default value is '+str(TOURNAMENT_SIZE_DEFAULT_VALUE)+'.'
     print >> sys.stderr, ''
@@ -283,7 +280,6 @@ def main():
     input_xlsx_file_name = get_command_line_param_val_default_value(sys.argv, '-input_xlsx_file_name', INPUT_XLSX_FILE_NAME_DEFAULT_VALUE)
     population_size = int(get_command_line_param_val_default_value(sys.argv, '-population_size', POPULATION_SIZE_DEFAULT_VALUE))
     num_generations = int(get_command_line_param_val_default_value(sys.argv, '-num_generations', NUM_GENERATIONS_DEFAULT_VALUE))
-    num_islands = int(get_command_line_param_val_default_value(sys.argv, '-num_islands', NUM_ISLANDS_DEFAULT_VALUE))
     tournament_size = int(get_command_line_param_val_default_value(sys.argv, '-tournament_size', TOURNAMENT_SIZE_DEFAULT_VALUE))
     elite_percent = float(get_command_line_param_val_default_value(sys.argv, '-elite_percent', ELITE_PERCENT_DFAULT_VALUE))/100.0
     mate_percent = float(get_command_line_param_val_default_value(sys.argv, '-mate_percent', MATE_PERCENT_DEFAULT_VALUE))/100.0
@@ -296,7 +292,6 @@ def main():
     print "    input_xlsx_file_name:", input_xlsx_file_name
     print "    population_size:", population_size
     print "    num_generations:", num_generations
-    print "    num_islands:", num_islands
     print "    tournament_size:", tournament_size
     print "    elite_percent: %.2f%%" % (100*elite_percent)
     print "    mate_percent: %.2f%%" % (100*mate_percent)
@@ -317,9 +312,11 @@ def main():
     ga.run_for_x_generations(num_generations)
     
     # The housing assigment for the genome with the largest P 
-    g, _, _ = max(ga.genomes_and_scores_list, key=lambda x:x[2])
-    with open('./result.txt','w') as f:
-        f.write(g.get_assignments_string()) 
+    for index, (g, N_val, P_val) in enumerate(ga.genomes_and_scores_list):
+        output_file_name = join_paths([output_dir,'(N:'+str(N_val)+',P:'+str(P_val)+')_result_'+str(index)+'.txt'])
+        results_string = g.get_assignments_string()
+        with open(output_file_name,'w') as f:
+            f.write(results_string) 
     
     print 
     print 'Total Run Time: '+str(time.time()-START_TIME) 

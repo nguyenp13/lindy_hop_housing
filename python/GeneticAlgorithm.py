@@ -219,23 +219,29 @@ class Genome(object):
         ans += '\n'
         ans += '-'*50
         ans += '\n'
+        ans += '\n(N:'+str(N)+',P:'+str(P)+')\n'
         ans += '\n'
-        ans += 'Unhoused Guests:\n'
+        ans += 'Unhoused Guests ('+str(len(unhoused_guest_id_nums))+'):\n'
+        unhoused_guest_name_list = []
         for unhoused_guest_id_num in unhoused_guest_id_nums:
             unhoused_guest = self.dict_of_guests[unhoused_guest_id_num]
             unhoused_guest_name = unhoused_guest['first_name']+' '+unhoused_guest['last_name']
+            unhoused_guest_name_list.append(unhoused_guest_name)
+        for unhoused_guest_name in sorted(unhoused_guest_name_list):
             ans += '    '+unhoused_guest_name+'\n' 
         ans += '\n'
-        ans += '-'*50
-        ans += '\n'
-        ans += 'Unclaimed Host Spots:\n'
+        ans += 'Unclaimed Host Spots ('+str(len(unclaimed_host_spot_id_nums))+'):\n'
+        host_with_unclaimed_spot_name_list = []
         for unclaimed_host_spot_id_num in unclaimed_host_spot_id_nums:
             host_with_unclaimed_spot_id_num = self.dict_of_host_spots[unclaimed_host_spot_id_num]
             host_with_unclaimed_spot = self.dict_of_hosts[host_with_unclaimed_spot_id_num]
             host_with_unclaimed_spot_name = host_with_unclaimed_spot['first_name']+' '+host_with_unclaimed_spot['last_name']
+            host_with_unclaimed_spot_name_list.append(host_with_unclaimed_spot_name)
+        for host_with_unclaimed_spot_name in sorted(host_with_unclaimed_spot_name_list):
             ans += '    '+host_with_unclaimed_spot_name+'\n' 
         ans += '\n'
         ans += '='*88
+        ans += '\n'
         ans += '\n'
         return ans
     
