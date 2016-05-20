@@ -270,7 +270,6 @@ class GeneticAlgorithm(object):
                         self.genomes_and_scores_list[index] = (genome, current_N, current_P, current_pareto_score) 
                         num_genomes_with_pareto_score+=1
                 current_pareto_score+=1
-#            print '\n'*3
             for _ in xrange(num_new_elites):
                 tournament_indices = random.sample(range(len(self.genomes_and_scores_list)), min(self.tournament_size, len(self.genomes_and_scores_list)))
                 tournament_participants = [self.genomes_and_scores_list[i] for i in tournament_indices]
@@ -278,12 +277,7 @@ class GeneticAlgorithm(object):
                 tournament_participants_and_indices.sort(key=lambda x:-x[0][2]) # Sort by biggest to smallest P value, secondary key
                 tournament_participants_and_indices.sort(key=lambda x:x[0][3]) # Sort by smallest to biggest Pareto Rank
                 tournament_winner, tournament_winner_index = min(tournament_participants_and_indices, key=lambda x:x[0][3])
-#                print "All Genomes:", map(lambda x:x[1:], self.genomes_and_scores_list)
-#                print "Participants:", map(lambda x:x[1:], tournament_participants)
-#                print "Winner:", tournament_winner[1:]
-#                print "Index:", tournament_winner_index
                 new_genomes_and_scores_list.append(self.genomes_and_scores_list.pop(tournament_winner_index)[:3])
-#                print "New List:", map(lambda x:x[1:], new_genomes_and_scores_list)
             while len(new_genomes_and_scores_list) < self.population_size: 
                 # we're going to add random genomes until we meet the population size
                 new_genome = new_genomes_and_scores_list[0][0].get_clone()
@@ -291,7 +285,6 @@ class GeneticAlgorithm(object):
                 new_genome.fill_edges()
                 new_genomes_and_scores_list.append((new_genome, new_genome.get_N_value(), new_genome.get_P_value()))
             self.genomes_and_scores_list = new_genomes_and_scores_list
-#            print "Final Genomes:", sorted(map(lambda x:x[1:], self.genomes_and_scores_list),key=lambda x:x[1])
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \

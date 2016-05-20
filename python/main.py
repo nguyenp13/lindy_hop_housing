@@ -6,11 +6,6 @@ Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events
 
 To understand how to use this code, see the usage() function or use "python ga.py -usage" on the commandline. 
 
-TODO: 
-    Debug GeneticAlgorithm.run_for_x_generations()
-        Make sure elite selection works
-        since our data shows all Max N, all the genomes are on the first pareto frontier
-            thus, it just picks some few to go to the next generation
 '''
 
 import os
@@ -318,20 +313,12 @@ def main():
     
     ga = GeneticAlgorithm.GeneticAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
     
-    prev_score=-inf
-    for i in xrange(100):
-        NP_pairs = sorted(ga.get_N_P_values(), key=lambda x:-x[1])
-        score = len([e for e in NP_pairs if e==NP_pairs[0]])
-        if score < prev_score:
-            print 
-        prev_score = score
-        print score, NP_pairs[0]
-        ga.run_for_x_generations()
+    ga.run_for_x_generations(num_generations)
     
     print 
-    print 'Total Run Time: '+str(time.time()-START_TIME)
+    print 'Total Run Time: '+str(time.time()-START_TIME) 
     print 
 
-if __name__ == '__main__':
-    main()
+if __name__ == '__main__': 
+    main() 
 
