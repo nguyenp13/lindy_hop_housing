@@ -315,6 +315,9 @@ def main():
     
     ga.run_for_x_generations(num_generations)
     
+    g = ga.get_genomes_list()[-1]
+    print g.get_assignments_string()
+    
     print 
     print 'Total Run Time: '+str(time.time()-START_TIME) 
     print 

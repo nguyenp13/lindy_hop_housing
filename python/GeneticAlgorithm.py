@@ -156,7 +156,59 @@ class Genome(object):
                     if "survivors' club" in guest_other_guest_late_night_tendencies_tuple: 
                         ans["coguest_some_late_survivors_club_mismatch"]+=1
         return ans
-        
+    
+    def get_assignments_string(self):
+        N = self.get_N_value()
+        P = self.get_P_value()
+        ans = '\n'+'='*88
+        ans += '\n\n(N:'+str(N)+',P:'+str(P)+')\n'
+        assignments=[]
+        for host_spot_id_num, guest_id_num in self.chosen_edges:
+            host_id_num = self.dict_of_host_spots[host_spot_id_num]
+            host = self.dict_of_hosts[host_id_num]
+            host_name = host['first_name']+' '+host['last_name']
+            assignments.append((host_name, host_id_num, guest_id_num))
+        assignments.sort()
+        prev_host_id_num = ''
+        set_of_preferences = set()
+        guest_to_guest_preferences = {}
+        for host_name, host_id_num, guest_id_num in assignments:
+            host = self.dict_of_hosts[host_id_num]
+            guest = self.dict_of_guests[guest_id_num]
+            guest_name = guest['first_name']+' '+guest['last_name']
+            if prev_host_id_num != host_id_num:
+                prev_host_id_num = host_id_num
+                for g1_name, g1_buddies in guest_to_guest_preferences.items():
+                    for g2_name, g2_buddies in guest_to_guest_preferences.items():
+                        if g1_name in g2_buddies:
+                            set_of_preferences.add(g2_name+' prefers '+g1_name+'.\n')
+                ans += ''.join(sorted(list(set_of_preferences)))
+                set_of_preferences = set()
+                guest_to_guest_preferences = {}
+                ans += "\n"
+                ans += '-'*50
+                ans += "\n"
+                ans += "\n"
+                ans += "Host: "+host_name+"\n"
+                ans += "Host Email: "+host["email"]+"\n"
+                ans += "\n"
+            guest_to_guest_preferences[guest_name] = guest["preferred_housing_buddies"]
+            if host_name in guest["preferred_housing_buddies"]:
+                set_of_preferences.add(host_name+' prefers '+guest_name+'.\n')
+            if guest_name in host["preferred_housing_buddies"]:
+                set_of_preferences.add(guest_name+' prefers '+host_name+'.\n')
+            ans += "    Guest: "+guest_name+"\n"
+            ans += "    Guest Email: "+guest['email']+"\n"
+            ans += "    Guest Hometown: "+guest['hometown']+"\n"
+            ans += "\n"
+        for g1_name, g1_buddies in guest_to_guest_preferences.items():
+            for g2_name, g2_buddies in guest_to_guest_preferences.items():
+                if g1_name in g2_buddies:
+                    set_of_preferences.add(g2_name+' prefers '+g1_name+'.\n')
+        ans += ''.join(sorted(list(set_of_preferences)))
+        ans += '\n'+'='*88
+        return ans
+    
 def mate(parent_1, parent_2):
     child = Genome(parent_1.dict_of_hosts, parent_1.dict_of_guests, parent_1.dict_of_host_spots, parent_1.dict_hosts_to_host_spots, parent_1.graph, [])
     edges_1 = parent_1.chosen_edges
@@ -228,8 +280,13 @@ class GeneticAlgorithm(object):
                 if are_compatible(host,guest):
                     self.graph.add_edge(host_spot_id_num,guest_id_num) # Edges are stored in (host_spot_id_num, guest_id_num) order
         
-        genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size-len(genomes_list0))]+genomes_list0
+        genomes_list = genomes_list0
+        for _ in xrange(self.population_size-len(genomes_list0)):
+            genomes_list.append(Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph))
         self.genomes_and_scores_list = [(g, g.get_N_value(), g.get_P_value()) for g in genomes_list]
+    
+    def get_genomes_list(self):
+        return [e[0] for e in self.genomes_and_scores_list]
     
     def get_N_P_values(self):
         return [(e[1],e[2]) for e in self.genomes_and_scores_list] 
@@ -285,6 +342,7 @@ class GeneticAlgorithm(object):
                 new_genome.fill_edges()
                 new_genomes_and_scores_list.append((new_genome, new_genome.get_N_value(), new_genome.get_P_value()))
             self.genomes_and_scores_list = new_genomes_and_scores_list
+    
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \
