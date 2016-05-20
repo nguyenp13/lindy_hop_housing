@@ -36,6 +36,11 @@ class Genome(object):
         self.chosen_edges = list(initial_edges)
         self.fill_edges()
     
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return sorted(self.chosen_edges)==sorted(other.chosen_edges)
+        return False 
+    
     def __repr__(self):
         ans = ''+ \
             '''Genome('''+ \
@@ -298,16 +303,18 @@ def are_compatible(host,guest):
 
 class GeneticAlgorithm(object):
     
-    def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0, genomes_list0=[]):
+    def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0, output_dir0, genomes_list0=[]):
         self.dict_of_hosts = dict_of_hosts0
         self.dict_of_guests = dict_of_guests0
         self.dict_of_host_spots = dict_of_host_spots0
         self.dict_hosts_to_host_spots = dict_hosts_to_host_spots0
         self.population_size = population_size0
+        self.population_size_original = population_size0
         self.tournament_size = tournament_size0
         self.elite_percent = elite_percent0
         self.mate_percent = mate_percent0
         self.mutation_percent = mutation_percent0
+        self.output_dir = output_dir0
         
         self.graph = Graph(nodes0=self.dict_of_host_spots.keys()+self.dict_of_guests.keys())
         for host_spot_id_num, host_id_num in self.dict_of_host_spots.items():
@@ -328,12 +335,15 @@ class GeneticAlgorithm(object):
         return [(e[1],e[2]) for e in self.genomes_and_scores_list] 
     
     def run_for_x_generations(self, num_generations=1):
+        prev_max_P = -inf
         start_time=time.time()
         for generation_index in xrange(num_generations):
-            display_update_text = (time.time()-start_time>1)
+            current_max_P = max(self.genomes_and_scores_list, key=lambda x:x[2])
+            display_update_text = (time.time()-start_time>10)
             if display_update_text:
                 start_time = time.time()
                 print "Working on generation %d." % generation_index
+                print "Current Population Size: %d" % self.population_size
             num_new_elites = int(self.elite_percent*self.population_size)
             num_new_children = int(self.mate_percent*self.population_size)
             num_new_mutations = int(self.mutation_percent*self.population_size)
@@ -369,13 +379,24 @@ class GeneticAlgorithm(object):
                         num_genomes_with_pareto_score+=1
                 current_pareto_score+=1
             for _ in xrange(num_new_elites):
+                if len(self.genomes_and_scores_list)==0:
+                    break
                 tournament_indices = random.sample(range(len(self.genomes_and_scores_list)), min(self.tournament_size, len(self.genomes_and_scores_list)))
                 tournament_participants = [self.genomes_and_scores_list[i] for i in tournament_indices]
                 tournament_participants_and_indices = zip(tournament_participants, tournament_indices)
                 tournament_participants_and_indices.sort(key=lambda x:-x[0][2]) # Sort by biggest to smallest P value, secondary key
                 tournament_participants_and_indices.sort(key=lambda x:x[0][3]) # Sort by smallest to biggest Pareto Rank
                 tournament_winner, tournament_winner_index = min(tournament_participants_and_indices, key=lambda x:x[0][3])
-                new_genomes_and_scores_list.append(self.genomes_and_scores_list.pop(tournament_winner_index)[:3])
+                potential_new_genome_and_score = self.genomes_and_scores_list.pop(tournament_winner_index)[:3]
+                if potential_new_genome_and_score not in new_genomes_and_scores_list:
+                    new_genomes_and_scores_list.append(potential_new_genome_and_score) # We don't want a bunch of copies of the same genome in the population 
+            if current_max_P == prev_max_P:
+                self.population_size += 1
+            elif self.population_size > self.population_size_original:
+                if self.population_size - self.population_size_original < 10:
+                    self.population_size = self.population_size_original
+                else:
+                    self.population_size = int((self.population_size+self.population_size_original)/2)
             while len(new_genomes_and_scores_list) < self.population_size: 
                 # we're going to add random genomes until we meet the population size
                 new_genome = new_genomes_and_scores_list[0][0].get_clone()
@@ -388,6 +409,15 @@ class GeneticAlgorithm(object):
                 print "Max N:", max(NP_values, key=lambda x:x[0])
                 print "Max P:", max(NP_values, key=lambda x:x[1])
                 print 
+            if display_update_text:
+                for index, (g, N_val, P_val) in enumerate(self.genomes_and_scores_list):
+                    output_file_directory = join_paths([self.output_dir,"generation_"+str(generation_index)])
+                    makedirs(output_file_directory)
+                    output_file_name = join_paths([output_file_directory,'(N:'+str(N_val)+',P:'+str(P_val)+')_result_'+str(index)+'.txt'])
+                    results_string = g.get_assignments_string()
+                    with open(output_file_name,'w') as f:
+                        f.write(results_string)
+            prev_max_P = current_max_P
     
     def __repr__(self):
         ans = ''+ \

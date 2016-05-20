@@ -22,7 +22,7 @@ EVENT_WE_ARE_HOUSING_FOR='RLX' # Value should be "The Process" or "RLX"
 
 INPUT_XLSX_FILE_NAME_DEFAULT_VALUE = "raw_housing_data.xlsx"
 POPULATION_SIZE_DEFAULT_VALUE = 100
-NUM_GENERATIONS_DEFAULT_VALUE = 100
+NUM_GENERATIONS_DEFAULT_VALUE = 1000
 NUM_ISLANDS_DEFAULT_VALUE = 1
 TOURNAMENT_SIZE_DEFAULT_VALUE = 32
 ELITE_PERCENT_DFAULT_VALUE = 50
@@ -307,16 +307,16 @@ def main():
     print "    Number of Guests: "+str(len(dict_of_guests))
     print 
     
-    ga = GeneticAlgorithm.GeneticAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent)
+    ga = GeneticAlgorithm.GeneticAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent, output_dir)
     
     ga.run_for_x_generations(num_generations)
     
-    # The housing assigment for the genome with the largest P 
+    # The housing assigment for the genome with the largest P
     for index, (g, N_val, P_val) in enumerate(ga.genomes_and_scores_list):
         output_file_name = join_paths([output_dir,'(N:'+str(N_val)+',P:'+str(P_val)+')_result_'+str(index)+'.txt'])
         results_string = g.get_assignments_string()
         with open(output_file_name,'w') as f:
-            f.write(results_string) 
+            f.write(results_string)
     
     print 
     print 'Total Run Time: '+str(time.time()-START_TIME) 
