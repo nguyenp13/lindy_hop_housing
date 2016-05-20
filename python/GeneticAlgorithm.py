@@ -182,181 +182,6 @@ def mate(parent_1, parent_2):
     child.fill_edges()
     return child
 
-#def ga(population_size=POPULATION_SIZE_DEFAULT_VALUE, generations=GENERATIONS_DEFAULT_VALUE, tournament_size=TOURNAMENT_SIZE_DEFAULT_VALUE, elite_percent=ELITE_PERCENT_DFAULT_VALUE, mate_percent=MATE_PERCENT_DEFAULT_VALUE, mutation_percent=MUTATION_PERCENT_DEFAULT_VALUE,starting_generation_descriptor_dir=STARTING_GENERATION_DESCRIPTOR_DIR_DEFAULT_VALUE,output_dir=OUTPUT_DIR_DEFAULT_VALUE): 
-#    
-#    global SAVE_VISUALIZATIONS
-#    
-#    global_pareto_frontier = [] # Dummy initial object so that we don't have to check if it's empty every time we attempt to add something to it. 
-#    
-#    # Genetic algorithm
-#    starter_genomes_and_scores=[] # Get genomes from descriptor files
-#    for potential_genome_list_descriptor_files in filter(lambda x:'.py'==x[-3:], list_dir_abs(starting_generation_descriptor_dir)):
-#        lines=open(potential_genome_list_descriptor_files,'r').readlines()
-#        for line in lines:
-#            if 'genomes=[Genome([(' == line[:18]: # Not very secure :/ 
-#                d = dict()
-#                exec line in globals(), d
-#                starter_genomes_and_scores += [(genome, 1/(genome.get_N_value()+1), 1/(genome.get_P_value()+1)) for genome in d['genomes']]
-#    starter_genomes_and_scores = sorted(starter_genomes_and_scores, key=lambda x:(x[0],-x[1])) 
-#    genomes = []
-#    prev_inverse_P=inf # We're only starting with the pareto frontier of all the starter genomes bc there are usually too many starter genomes
-#    for (genome, inverse_N, inverse_P) in starter_genomes_and_scores:
-#        if inverse_P<=prev_inverse_P:
-#            genomes.append(genome)
-#            prev_P = P
-#    while len(genomes)<population_size:
-#        genomes.append(Genome())
-#    
-#    num_elites = int(round(elite_percent*population_size))
-#    num_offspring = int(round(mate_percent*population_size))
-#    num_mutated = int(round(mutation_percent*population_size))
-#    
-#    if SAVE_VISUALIZATIONS:
-#        makedirs(join_paths([output_dir,'all_generations_point_cloud_graph_graph']))
-#        makedirs(join_paths([output_dir,'point_cloud_graph']))
-#        makedirs(join_paths([output_dir,'pareto_curve_graph']))
-#        makedirs(join_paths([output_dir,'global_pareto_curve_graph']))
-#        makedirs(join_paths([output_dir,'global_pareto_frontier_scores_csv']))
-#        makedirs(join_paths([output_dir,'all_scores_per_generation_csv']))
-#        makedirs(join_paths([output_dir,'pareto_frontier_scores_per_generation_csv']))
-#        makedirs(join_paths([output_dir,'population_data']))
-#        fig_all_points, subplot_all_points = get_subplots()
-#        fig_global_pareto_curve_graph, subplot_global_pareto_curve_graph = get_subplots()
-#    for generation in xrange(generations):
-#        SAVE_VISUALIZATIONS=(generation%NUM_GENERATIONS_BEFORE_SAVING_VISUALIZATIONS==0)
-#        print "%-30s Elapsed Time: %015f" % ("Working on generation "+str(generation)+'.',time.time()-START_TIME)
-#        
-#        # Save the population
-#        with open(join_paths([os.path.abspath(output_dir),'population_data','generation_%03d.py'%generation]),'w') as f:
-#            f.write('genomes='+genomes.__repr__())
-#        
-#        # Evaluate each population member
-#        inverse_N_P_scores = sorted([(index, 1.0/(1+genome.get_N_value()), 1.0/(1+genome.get_P_value())) for index,genome in enumerate(genomes)], key=lambda x:x[1]) # sorted from lowest to highest 1/N values
-#        xy = sorted(list(set([e[1:3] for e in inverse_N_P_scores])),key=lambda e:(e[0],-e[1]))
-#        x = [1.0/e[0]-1 for e in xy] # N values
-#        y = [1.0/e[1]-1 for e in xy] # P values
-#        with open(join_paths([os.path.abspath(output_dir),'all_scores_per_generation_csv','generation_%03d.csv'%generation]),'w') as f:
-#            f.write('N, P\n')
-#            for n,p in zip(x,y):
-#                f.write(str(int(n))+', '+str(int(p))+'\n')
-#        if SAVE_VISUALIZATIONS:
-#            #Save point clouds over all generations visualization
-#            subplot_all_points.set_title('Generation '+str(generation))
-#            subplot_all_points.scatter(x, y, zorder=10, c='c', alpha=0.10)
-#            fig_all_points.savefig(join_paths([output_dir,'all_generations_point_cloud_graph_graph','generation_%03d.png'%generation]))
-#            # Save only this generation point cloud visualization
-#            fig, subplot = get_subplots()
-#            subplot.scatter(x, y, zorder=10, c='r', alpha=1.0)
-#            fig.savefig(join_paths([output_dir,'point_cloud_graph','generation_%03d.png'%generation]))
-#            matplotlib.pyplot.close(fig)
-#        # Get pareto ranking by N and P values
-#        pareto_ranking = [] 
-#        if SAVE_VISUALIZATIONS:
-#            fig_pareto_curve_graph, subplot_pareto_curve_graph = get_subplots()
-#        for pareto_rank_score in xrange(len(inverse_N_P_scores)): # the number of pareto rank values is upper bounded by the number of points as they all may fall on different pareto curves (imagine if they all lied on the f(x)=x line). 
-#            indices_to_pop=[]
-#            prev_inverse_P_score = inf
-#            for i,(index_of_genome, inverse_N_score, inverse_P_score) in enumerate(sorted(inverse_N_P_scores, key=lambda e:e[1])):
-#                if inverse_P_score<=prev_inverse_P_score:
-#                    prev_inverse_P_score=inverse_P_score
-#                    indices_to_pop.append(i)
-#                    pareto_ranking.append((index_of_genome, pareto_rank_score, inverse_N_score, inverse_P_score))
-#            # Update global_pareto_frontier
-#            if pareto_rank_score==0:
-#                if SAVE_VISUALIZATIONS:
-#                    n_of_max_N=int(1.0/pareto_ranking[0][-2]-1)
-#                    p_of_max_N=int(1.0/pareto_ranking[0][-1]-1)
-#                    n_of_max_P=int(1.0/pareto_ranking[-1][-2]-1)
-#                    p_of_max_P=int(1.0/pareto_ranking[-1][-1]-1)
-#                    add_upper_left_text_box(subplot_pareto_curve_graph, "Max N: (N:"+str(n_of_max_N)+",P:"+str(p_of_max_N)+")\nMax P: (N:"+str(n_of_max_P)+",P:"+str(p_of_max_P)+")")
-#                new_global_pareto_frontier=sorted(pareto_ranking+global_pareto_frontier, key=lambda x:(x[-2],-x[-1]))
-#                indices_to_avoid=[]
-#                prev_inverse_P = inf
-#                for i, elem in enumerate(new_global_pareto_frontier):
-#                    inverse_P_score=elem[-1]
-#                    if inverse_P_score <= prev_inverse_P:
-#                        prev_inverse_P = inverse_P_score
-#                        continue
-#                    indices_to_avoid.append(i)
-#                for i in indices_to_avoid[::-1]:
-#                    new_global_pareto_frontier.pop(i)
-#                global_pareto_frontier=[]
-#                for i, elem in enumerate(new_global_pareto_frontier):
-#                    inverse_N_score=elem[-2]
-#                    inverse_P_score=elem[-1]
-#                    genome = genomes[elem[0]] if type(elem[0])==int else elem[0]
-#                    assertion(isinstance(genome,Genome),"genome is not an instance of the class Genome.")
-#                    global_pareto_frontier.append((genome,inverse_N_score,inverse_P_score))
-#                with open(join_paths([os.path.abspath(output_dir),'pareto_frontier_scores_per_generation_csv','pareto_frontier_at_generation_%03d.csv'%generation]),'w') as f:
-#                    f.write('N, P\n')
-#                    for (_, _, inverse_N_score, inverse_P_score) in pareto_ranking:
-#                        n = 1.0/inverse_N_score-1
-#                        p = 1.0/inverse_P_score-1
-#                        f.write(str(int(n))+', '+str(int(p))+'\n')
-#            if SAVE_VISUALIZATIONS:
-#                subplot_global_pareto_curve_graph.set_title('Generation '+str(generation))
-#                xy = sorted(list(set([(inverse_N_score,inverse_P_score) for (genome,inverse_N_score,inverse_P_score) in global_pareto_frontier])), key=lambda e:(e[0],-e[1]))
-#                x = [int(1.0/e[0]-1) for e in xy] # N values
-#                y = [int(1.0/e[1]-1) for e in xy] # P values
-#                color=numpy.random.rand(3,1)
-#                subplot_global_pareto_curve_graph.plot(x, y, zorder=10, c=color, alpha=1.0)
-#                subplot_global_pareto_curve_graph.scatter(x, y, zorder=10, c=color, alpha=1.0)
-#                add_upper_left_text_box(subplot_global_pareto_curve_graph, "Max N: (N:"+str(x[0])+",P:"+str(y[0])+")\nMax P: (N:"+str(x[-1])+",P:"+str(y[-1])+")")
-#                fig_global_pareto_curve_graph.savefig(join_paths([output_dir,'global_pareto_curve_graph','generation_%03d.png'%generation]))
-#                subplot_pareto_curve_graph.set_title('Generation '+str(generation))
-#                xy = sorted(list(set([inverse_N_P_scores[i][1:3] for i in indices_to_pop])), key=lambda e:(e[0],-e[1]))
-#                x = [1.0/e[0]-1 for e in xy] # N values
-#                y = [1.0/e[1]-1 for e in xy] # P values
-#                color=numpy.random.rand(3,1)
-#                subplot_pareto_curve_graph.plot(x, y, zorder=10, c=color, alpha=1.0)
-#                subplot_pareto_curve_graph.scatter(x, y, zorder=10, c=color, alpha=1.0) # points may overlap, and thus some differen colored points may appear on multiple lines, which gives the illusion that the coloring of the points and lines are different.
-#            for i in indices_to_pop[::-1]:
-#                inverse_N_P_scores.pop(i)
-#            if len(inverse_N_P_scores)==0:
-#                break
-#        if SAVE_VISUALIZATIONS:
-#            fig_pareto_curve_graph.savefig(join_paths([output_dir,'pareto_curve_graph','generation_%03d.png'%generation]))
-#            matplotlib.pyplot.close(fig_pareto_curve_graph)
-#        assertion(len(inverse_N_P_scores)==0, "inverse_N_P_scores is not empty after pareto rank determination (all values should've been popped out of it.")
-#        # Tournament selection for the elites
-#        elites_scores = []
-#        tournament_group_start_index=inf
-#        while len(elites_scores)<num_elites:
-#            if tournament_group_start_index>len(genomes)-1:
-#                random.shuffle(pareto_ranking) # tournament groups are selected randomly
-#                tournament_group_start_index=0
-#            tournament_group_end_index = min(len(genomes), tournament_group_start_index+tournament_size)
-#            tournament_group = pareto_ranking[tournament_group_start_index:tournament_group_end_index]
-#            for genome_pareto_score_set in sorted(tournament_group, key=lambda x:x[1]):
-#                if genome_pareto_score_set not in elites_scores:
-#                    elites_scores.append(genome_pareto_score_set)
-#                    break
-#            tournament_group_start_index += tournament_size
-#        elites = [genomes[index_of_genome] for (index_of_genome, pareto_rank_score, inverse_N_score, inverse_P_score) in elites_scores]
-#        # Random mating 
-#        offspring=[mate(random.choice(genomes),random.choice(genomes)) for i in xrange(num_offspring)]
-#        # Random mutation
-#        mutation=[]
-#        for genome in random.sample(genomes,num_mutated):
-#            mutation.append(genome.get_clone())
-#            mutation[-1].mutate()
-#        # Create the new generation
-#        genomes=elites+offspring+mutation
-#        genomes=genomes[:population_size]
-#        assertion(len(genomes)==population_size,"len(genomes) is not equal to population_size.")
-#        # Save global_pareto_frontier
-#        with open(join_paths([os.path.abspath(output_dir),'global_pareto_frontier.py']),'w') as f:
-#            # We want to save this on every generation in case the running stops for any reason ebfore we've reached our final generation.
-#            f.write('genomes='+([e[0] for e in global_pareto_frontier]).__repr__())
-#        with open(join_paths([os.path.abspath(output_dir),'global_pareto_frontier_scores_csv','global_pareto_frontier_at_generation_%03d.csv'%generation]),'w') as f:
-#            f.write('N, P\n')
-#            for (_,inverse_n,inverse_p) in global_pareto_frontier:
-#                f.write(str(int(1.0/inverse_n-1))+', '+str(int(1.0/inverse_p-1))+'\n')
-#    
-#    if SAVE_VISUALIZATIONS:
-#        matplotlib.pyplot.close(fig_all_points)
-#        matplotlib.pyplot.close(fig_global_pareto_curve_graph)
-
 def are_compatible(host,guest):
     local_debug=False
     def local_debug_print(text):
@@ -387,7 +212,7 @@ def are_compatible(host,guest):
 
 class GeneticAlgorithm(object):
     
-    def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0):
+    def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0, genomes_list0=[]):
         self.dict_of_hosts = dict_of_hosts0
         self.dict_of_guests = dict_of_guests0
         self.dict_of_host_spots = dict_of_host_spots0
@@ -405,8 +230,56 @@ class GeneticAlgorithm(object):
                 if are_compatible(host,guest):
                     self.graph.add_edge(host_spot_id_num,guest_id_num) # Edges are stored in (host_spot_id_num, guest_id_num) order
         
-        self.genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size)]
+        genomes_list = [Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph) for _ in xrange(self.population_size-len(genomes_list0))]+genomes_list0
+        self.genomes_and_scores_list = [(g, g.get_N_value(), g.get_P_value()) for g in genomes_list]
     
+    def run_for_x_generations(self, num_generations=1):
+        for generation_index in xrange(num_generations):
+            num_new_elites = int(self.elite_percent*self.population_size)
+            num_new_children = int(self.mate_percent*self.population_size)
+            num_new_mutations = int(self.mutation_percent*self.population_size)
+            
+            new_genomes_and_scores_list = []
+            for e in random.sample(self.genomes_and_scores_list, num_new_mutations):
+                mutation = e[0].clone()
+                mutation.mutate()
+                new_genomes_and_scores_list.append((mutation,mutation.get_N_value(),mutation.get_P_value()))
+            for _ in xrange(num_new_children):
+                parents_and_scores = random.sample(self.genomes_and_scores_list, 2)
+                parent_1 = parents_and_scores[0][0]
+                parent_2 = parents_and_scores[1][0]
+                child = mate(parent_1, parent_2)
+                new_genomes_and_scores_list.append((child, child.get_N_value(), child.get_P_value()))
+            self.genomes_and_scores_list.sort(key=lambda x:-x[0]) # now sorted from biggest to smallest N
+            num_genomes_with_pareto_score=0
+            current_pareto_score=0
+            prev_P = -inf
+            while num_genomes_with_pareto_score<len(self.genomes_and_scores_list): # Get Pareto Scores 
+                for index in enumerate(self.genomes_and_scores_list):
+                    # We store the pareto score in the 4th box of the tuple
+                    if len(genome_and_scores)>3:
+                        continue
+                    genome_and_scores[index]
+                    genome = genome_and_scores[0]
+                    current_N = genome_and_scores[1]
+                    current_P = genome_and_scores[2]
+                    if current_P >= prev_P:
+                        prev_P = current_P
+                        self.genomes_and_scores_list[index] = (genome, current_N, current_P, current_pareto_score) 
+                        num_genomes_with_pareto_score+=1
+                current_pareto_score+=1
+            for _ in xrange(num_new_elites):
+                tournament_indices = random.sample(range(len(self.genomes_and_scores_list)), min(self.tournament_size, len(self.genomes_and_scores_list)))
+                tournament_winner, tournament_winner_index = max(([self.genomes_and_scores_list[i],i) for i in tournament_indices], lambda x:x[0][3])
+                new_genomes_and_scores_list.append(self.genomes_and_scores_list.pop(tournament_winner_index)[:3])
+            while len(new_genomes_and_scores_list) < self.population_size: 
+                # we're going to add random genomes until we meet the population size
+                new_genome = new_genomes_and_scores_list[0][0].get_clone()
+                new_genome.chosen_edges = []
+                new_genome.fill_edges()
+                new_genomes_and_scores_list.append((new_genome, new_genome.get_N_value(), new_genome.get_P_value()))
+            self.genomes_and_scores_list = new_genomes_and_scores_list
+        
     def __repr__(self):
         ans = ''+ \
             '''GeneticAlgorithm('''+ \
@@ -419,7 +292,7 @@ class GeneticAlgorithm(object):
                 '''mate_percent0='''+self.mate_percent.__repr__()+''', '''+ \
                 '''mutation_percent0='''+self.mutation_percent.__repr__()+''', '''+ \
                 '''graph0='''+self.graph.__repr__()+''', '''+ \
-                '''genomes_list0='''+self.genomes_list.__repr__()+''', '''+ \
+                '''genomes_list0='''+([e[0] for e in self.self.genomes_and_scores_list]).__repr__()+''', '''+ \
             ''')'''
         return ans
 

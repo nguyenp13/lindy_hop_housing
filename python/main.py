@@ -7,9 +7,7 @@ Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events
 To understand how to use this code, see the usage() function or use "python ga.py -usage" on the commandline. 
 
 TODO: 
-    GeneticAlgorithm() code
-        create genomes class
-        create method for GeneticAlgorithm() to run one generation
+    Debug GeneticAlgorithm.run_for_x_generations()
 '''
 
 import os
