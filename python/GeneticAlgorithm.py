@@ -339,7 +339,7 @@ class GeneticAlgorithm(object):
         start_time=time.time()
         for generation_index in xrange(num_generations):
             current_max_P = max(self.genomes_and_scores_list, key=lambda x:x[2])
-            display_update_text = (time.time()-start_time>10)
+            display_update_text = (time.time()-start_time>15)
             if display_update_text:
                 start_time = time.time()
                 print "Working on generation %d." % generation_index
@@ -391,7 +391,7 @@ class GeneticAlgorithm(object):
                 if potential_new_genome_and_score not in new_genomes_and_scores_list:
                     new_genomes_and_scores_list.append(potential_new_genome_and_score) # We don't want a bunch of copies of the same genome in the population 
             if current_max_P == prev_max_P:
-                self.population_size += 10
+                self.population_size += 4
             elif self.population_size > self.population_size_original:
                 if self.population_size - self.population_size_original < 10:
                     self.population_size = self.population_size_original
