@@ -338,7 +338,7 @@ class GeneticAlgorithm(object):
         prev_max_P = -inf
         start_time=time.time()
         for generation_index in xrange(num_generations):
-            current_max_P = max(self.genomes_and_scores_list, key=lambda x:x[2])
+            current_max_P = max(self.genomes_and_scores_list, key=lambda x:x[2])[2]
             display_update_text = (time.time()-start_time>15)
             if display_update_text:
                 start_time = time.time()
@@ -397,6 +397,7 @@ class GeneticAlgorithm(object):
                     self.population_size = self.population_size_original
                 else:
                     self.population_size = int((self.population_size+self.population_size_original)/2)
+            print self.population_size, current_max_P, prev_max_P
             while len(new_genomes_and_scores_list) < self.population_size: 
                 # we're going to add random genomes until we meet the population size
                 new_genome = new_genomes_and_scores_list[0][0].get_clone()
