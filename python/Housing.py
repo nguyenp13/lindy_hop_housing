@@ -3,6 +3,8 @@ import main
 import time
 from util import *
 
+TIME_BETWEEN_UPDATES = 1
+
 class Graph(object): 
     
     def __init__(self, nodes0=set(), edges0=set()): 
@@ -51,7 +53,7 @@ class Genome(object):
                 '''initial_edges='''+self.chosen_edges.__repr__()+''', '''+ \
             ''')'''
         return ans
-        
+    
     def mutate(self):
         self.chosen_edges = random.sample(self.chosen_edges, len(self.chosen_edges)/2)
         self.fill_edges()
@@ -301,7 +303,7 @@ def are_compatible(host,guest):
             return False
     return True
 
-class GeneticAlgorithm(object):
+class HousingAlgorithm(object):
     
     def __init__(self, dict_of_hosts0, dict_of_guests0, dict_of_host_spots0, dict_hosts_to_host_spots0, population_size0, tournament_size0, elite_percent0, mate_percent0, mutation_percent0, output_dir0, genomes_list0=[]):
         self.dict_of_hosts = dict_of_hosts0
@@ -334,12 +336,83 @@ class GeneticAlgorithm(object):
     def get_N_P_values(self):
         return [(e[1],e[2]) for e in self.genomes_and_scores_list] 
     
-    def run_for_x_generations(self, num_generations=1):
+    def get_pareto_scores(self):
+        ans = [-1]*len(self.genomes_and_scores_list)
+        self.genomes_and_scores_list.sort(key=lambda x:x[2]) # sort from smallest to biggest P, secondary key
+        self.genomes_and_scores_list.sort(key=lambda x:-x[1]) # sort from biggest to smallest N
+        num_genomes_with_pareto_score=0
+        current_pareto_score=0
+        while num_genomes_with_pareto_score<len(self.genomes_and_scores_list): # Get Pareto Scores 
+            prev_P = -inf
+            for index in xrange(len(self.genomes_and_scores_list)):
+                if ans[index]!=-1:
+                    continue
+                current_P = self.genomes_and_scores_list[index][2]
+                if current_P >= prev_P:
+                    prev_P = current_P
+                    ans[index] = current_pareto_score
+                    num_genomes_with_pareto_score+=1
+            current_pareto_score+=1
+        return ans
+    
+    def write_results_to_file(self, result_dir=None):
+        if result_dir is None:
+            output_file_directory=self.output_dir
+        else:
+            output_file_directory=result_dir
+        makedirs(output_file_directory)
+        for index, (g, N_val, P_val) in enumerate(self.genomes_and_scores_list):
+            output_file_name = join_paths([output_file_directory,'(N:'+str(N_val)+',P:'+str(P_val)+')_result_'+str(index)+'.txt'])
+            results_string = g.get_assignments_string()
+            with open(output_file_name,'w') as f:
+                f.write(results_string)
+    
+    def run_greedy_search(self, num_generations=1):
+        start_time=time.time()
+        num_clones=self.population_size_original
+        for generation_index in xrange(num_generations):
+            display_update_text = (time.time()-start_time>TIME_BETWEEN_UPDATES)
+            NP_values = self.get_N_P_values()
+            if display_update_text:
+                start_time = time.time()
+                print "Working on generation %d." % generation_index
+                print "Current Number of Clones to Mutate: %d" % num_clones
+                print "Max N:", max(NP_values, key=lambda x:x[0])
+                print "Max P:", max(NP_values, key=lambda x:x[1])
+                print 
+                self.write_results_to_file(join_paths([self.output_dir,"generation_"+str(generation_index)]))
+            new_genomes_and_scores_list = []
+            pareto_scores = self.get_pareto_scores()
+            best_pareto_genomes_and_scores = zip(*(filter(lambda x: x[1]==0,zip(self.genomes_and_scores_list, pareto_scores))))[0]
+            best_P_value = max(map(lambda x:x[2], best_pareto_genomes_and_scores))
+            best_P_genomes_and_scores = filter(lambda x: x[2]==best_P_value, best_pareto_genomes_and_scores)
+            for genome, N_val, P_val in best_P_genomes_and_scores:
+                for i in xrange(num_clones):
+                    clone = genome.get_clone()
+                    clone.mutate()
+                    clone_N = clone.get_N_value()
+                    clone_P = clone.get_P_value()
+                    if clone_N>N_val or clone_P>P_val:
+                        new_genomes_and_scores_list.append((clone, clone_N, clone_P))
+            num_old_generation_genomes = self.population_size_original-len(new_genomes_and_scores_list)
+            if num_old_generation_genomes<0:
+                self.population_size = len(new_genomes_and_scores_list)
+                self.genomes_and_scores_list = new_genomes_and_scores_list
+            else:
+                old_generation_genomes = random.sample(self.genomes_and_scores_list, num_old_generation_genomes)
+                self.genomes_and_scores_list = new_genomes_and_scores_list+old_generation_genomes
+            if len(new_genomes_and_scores_list)==0:
+                num_clones += 10
+                num_clones = max(num_clones, self.population_size_original*3)
+            else: 
+                num_clones = max(self.population_size_original, num_clones-20)
+    
+    def run_genetic_algorithm(self, num_generations=1):
         prev_max_P = -inf
         start_time=time.time()
         for generation_index in xrange(num_generations):
             current_max_P = max(self.genomes_and_scores_list, key=lambda x:x[2])[2]
-            display_update_text = (time.time()-start_time>15)
+            display_update_text = (time.time()-start_time>TIME_BETWEEN_UPDATES)
             if display_update_text:
                 start_time = time.time()
                 print "Working on generation %d." % generation_index
@@ -359,37 +432,21 @@ class GeneticAlgorithm(object):
                 parent_2 = parents_and_scores[1][0]
                 child = mate(parent_1, parent_2)
                 new_genomes_and_scores_list.append((child, child.get_N_value(), child.get_P_value()))
-            self.genomes_and_scores_list.sort(key=lambda x:x[2]) # sort from smallest to biggest P, secondary key
-            self.genomes_and_scores_list.sort(key=lambda x:-x[1]) # sort from biggest to smallest N
-            num_genomes_with_pareto_score=0
-            current_pareto_score=0
-            while num_genomes_with_pareto_score<len(self.genomes_and_scores_list): # Get Pareto Scores 
-                prev_P = -inf
-                for index in xrange(len(self.genomes_and_scores_list)):
-                    genome_and_scores = self.genomes_and_scores_list[index]
-                    # We store the pareto score in the 4th box of the tuple
-                    if len(genome_and_scores)>3:
-                        continue
-                    genome = genome_and_scores[0]
-                    current_N = genome_and_scores[1]
-                    current_P = genome_and_scores[2]
-                    if current_P >= prev_P:
-                        prev_P = current_P
-                        self.genomes_and_scores_list[index] = (genome, current_N, current_P, current_pareto_score) 
-                        num_genomes_with_pareto_score+=1
-                current_pareto_score+=1
+            pareto_scores = self.get_pareto_scores()
             for _ in xrange(num_new_elites):
                 if len(self.genomes_and_scores_list)==0:
                     break
                 tournament_indices = random.sample(range(len(self.genomes_and_scores_list)), min(self.tournament_size, len(self.genomes_and_scores_list)))
                 tournament_participants = [self.genomes_and_scores_list[i] for i in tournament_indices]
-                tournament_participants_and_indices = zip(tournament_participants, tournament_indices)
-                tournament_participants_and_indices.sort(key=lambda x:-x[0][2]) # Sort by biggest to smallest P value, secondary key
-                tournament_participants_and_indices.sort(key=lambda x:x[0][3]) # Sort by smallest to biggest Pareto Rank
-                tournament_winner, tournament_winner_index = min(tournament_participants_and_indices, key=lambda x:x[0][3])
+                tournament_pareto_scores = [pareto_scores[i] for i in tournament_indices]
+                tournament_participants_and_pareto_scores_and_indices = zip(tournament_participants, tournament_pareto_scores, tournament_indices)
+                tournament_participants_and_pareto_scores_and_indices.sort(key=lambda x:-x[0][2]) # Sort by biggest to smallest P value, secondary key
+                tournament_participants_and_pareto_scores_and_indices.sort(key=lambda x:x[1]) # Sort by smallest to biggest Pareto Rank
+                tournament_winner, tournament_winner_pareto_score, tournament_winner_index = min(tournament_participants_and_pareto_scores_and_indices, key=lambda x:x[1])
                 potential_new_genome_and_score = self.genomes_and_scores_list.pop(tournament_winner_index)[:3]
                 if potential_new_genome_and_score not in new_genomes_and_scores_list:
-                    new_genomes_and_scores_list.append(potential_new_genome_and_score) # We don't want a bunch of copies of the same genome in the population 
+                    # We don't want a bunch of copies of the same genome in the population 
+                    new_genomes_and_scores_list.append(potential_new_genome_and_score) 
             if current_max_P == prev_max_P:
                 self.population_size += 4
             elif self.population_size > self.population_size_original:
@@ -397,7 +454,6 @@ class GeneticAlgorithm(object):
                     self.population_size = self.population_size_original
                 else:
                     self.population_size = int((self.population_size+self.population_size_original)/2)
-            print self.population_size, current_max_P, prev_max_P
             while len(new_genomes_and_scores_list) < self.population_size: 
                 # we're going to add random genomes until we meet the population size
                 new_genome = new_genomes_and_scores_list[0][0].get_clone()
@@ -410,19 +466,12 @@ class GeneticAlgorithm(object):
                 print "Max N:", max(NP_values, key=lambda x:x[0])
                 print "Max P:", max(NP_values, key=lambda x:x[1])
                 print 
-            if display_update_text:
-                for index, (g, N_val, P_val) in enumerate(self.genomes_and_scores_list):
-                    output_file_directory = join_paths([self.output_dir,"generation_"+str(generation_index)])
-                    makedirs(output_file_directory)
-                    output_file_name = join_paths([output_file_directory,'(N:'+str(N_val)+',P:'+str(P_val)+')_result_'+str(index)+'.txt'])
-                    results_string = g.get_assignments_string()
-                    with open(output_file_name,'w') as f:
-                        f.write(results_string)
+                self.write_results_to_file(join_paths([self.output_dir,"generation_"+str(generation_index)]))
             prev_max_P = current_max_P
     
     def __repr__(self):
         ans = ''+ \
-            '''GeneticAlgorithm('''+ \
+            '''HousingAlgorithm('''+ \
                 '''dict_of_hosts0='''+self.dict_of_hosts.__repr__()+''', '''+ \
                 '''dict_of_guests0='''+self.dict_of_guests.__repr__()+''', '''+ \
                 '''dict_of_host_spots0='''+self.dict_of_host_spots.__repr__()+''', '''+ \

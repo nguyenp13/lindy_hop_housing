@@ -4,7 +4,7 @@
 
 Genetic Algorithm for Assigning Housing Spots to Guests for Swing Dancing Events. 
 
-To understand how to use this code, see the usage() function or use "python ga.py -usage" on the commandline. 
+To understand how to use this code, see the usage() function or use "python main.py -usage" on the commandline. 
 
 '''
 
@@ -12,7 +12,7 @@ import os
 import sys
 import pdb
 import time
-import GeneticAlgorithm
+import Housing
 from util import *
 
 START_TIME=time.time()
@@ -240,7 +240,7 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
     return dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots 
 
 def usage(): 
-    # Example Usage: python ga.py -population_size 100 -num_generations 100 -output_dir ./output
+    # Example Usage: python main.py -population_size 100 -num_generations 100 -output_dir ./output
     print >> sys.stderr, 'Usage: python '+__file__+' <options>'
     print >> sys.stderr, ''
     print >> sys.stderr, 'Options:'
@@ -288,7 +288,7 @@ def main():
     output_dir = os.path.abspath(get_command_line_param_val_default_value(sys.argv, '-output_dir', OUTPUT_DIR_DEFAULT_VALUE))
     makedirs(output_dir)
     
-    print "GA Parameters"
+    print "Search Parameters"
     print "    input_xlsx_file_name:", input_xlsx_file_name
     print "    population_size:", population_size
     print "    num_generations:", num_generations
@@ -307,12 +307,13 @@ def main():
     print "    Number of Guests: "+str(len(dict_of_guests))
     print 
     
-    ga = GeneticAlgorithm.GeneticAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent, output_dir)
+    search = Housing.HousingAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent, output_dir)
     
-    ga.run_for_x_generations(num_generations)
+#    search.run_genetic_algorithm(num_generations)
+    search.run_greedy_search(num_generations)
     
     # The housing assigment for the genome with the largest P
-    for index, (g, N_val, P_val) in enumerate(ga.genomes_and_scores_list):
+    for index, (g, N_val, P_val) in enumerate(search.genomes_and_scores_list):
         output_file_name = join_paths([output_dir,'(N:'+str(N_val)+',P:'+str(P_val)+')_result_'+str(index)+'.txt'])
         results_string = g.get_assignments_string()
         with open(output_file_name,'w') as f:
