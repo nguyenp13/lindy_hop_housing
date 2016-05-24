@@ -3,7 +3,7 @@ import main
 import time
 from util import *
 
-TIME_BETWEEN_UPDATES = 1
+TIME_BETWEEN_UPDATES = 15
 
 class Graph(object): 
     
@@ -366,6 +366,63 @@ class HousingAlgorithm(object):
             results_string = g.get_assignments_string()
             with open(output_file_name,'w') as f:
                 f.write(results_string)
+    
+    def run_exhaustive_search(self):
+        start_time=time.time()
+        dict_of_guests_to_list_of_potential_host_spots = dict()
+        for guest_id_num in self.dict_of_guests.keys():
+            dict_of_guests_to_list_of_potential_host_spots[guest_id_num]=[]
+        for host_spot_id_num, guest_id_num in self.graph.edges:
+            dict_of_guests_to_list_of_potential_host_spots[guest_id_num].append(host_spot_id_num)
+        sorted_dict_of_guests_to_list_of_potential_host_spots = sorted(dict_of_guests_to_list_of_potential_host_spots.items())
+        
+        g = Genome(self.dict_of_hosts, self.dict_of_guests, self.dict_of_host_spots, self.dict_hosts_to_host_spots, self.graph)
+        solution = [0]*len(dict_of_guests_to_list_of_potential_host_spots)
+        
+        def increment(sol):
+            index_to_increment = 0
+            while index_to_increment<len(sol):
+                sol[index_to_increment]+=1
+                if sol[index_to_increment]>=len(sorted_dict_of_guests_to_list_of_potential_host_spots[index_to_increment][1]): 
+                    sol[index_to_increment]=0
+                    index_to_increment+=1
+                else:
+                    return sol
+            return None
+        
+        best_N = 0
+        best_P = 0
+        best_genomes = []
+        
+        while solution is not None:
+            display_update_text = (time.time()-start_time>TIME_BETWEEN_UPDATES)
+            if display_update_text:
+                start_time=time.time()
+                print "Best N:", best_N
+                print "Best P:", best_P
+                print solution
+            chosen_edges = [(g_id_num, list_of_host_spots[index]) for (g_id_num, list_of_host_spots), index in zip(sorted_dict_of_guests_to_list_of_potential_host_spots, solution)]
+            set_of_chosen_host_spot_id_nums, set_of_chosen_guest_id_nums = map(set,zip(*chosen_edges))
+            if len(set_of_chosen_host_spot_id_nums)<len(solution) or len(set_of_chosen_guest_id_nums)<len(solution):
+                # If the solution is invalid, i.e. it has more than one guest to one spot or more than one spot to one guest
+                solution = increment(solution) 
+                continue
+            g.chosen_edges = chosen_edges
+            g_N_value = g.get_N_value()
+            g_P_value = g.get_P_value()
+            if g_N_value < best_N or g_P_value < best_P: 
+                # if the solution is not at least as good as any we've found so far
+                solution = increment(solution) 
+                continue
+            if g_N_value == best_N and g_P_value == best_P:
+                # if the solution is equal to the best we've found so far
+                best_genomes.append(g.get_clone()) 
+            if g_N_value > best_N or g_P_value > best_P:
+                # if the solution is better in some way than the best we've found so far
+                best_N = g_N_value
+                best_P = g_P_value
+                best_genomes = [g.get_clone()]
+            solution = increment(solution) 
     
     def run_greedy_search(self, num_generations=1):
         start_time=time.time()
