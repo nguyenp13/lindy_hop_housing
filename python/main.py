@@ -309,9 +309,9 @@ def main():
     
     search = Housing.HousingAlgorithm(dict_of_hosts, dict_of_guests, dict_of_host_spots, dict_hosts_to_host_spots, population_size, tournament_size, elite_percent, mate_percent, mutation_percent, output_dir)
     
-#    search.run_genetic_algorithm(num_generations)
+    search.run_genetic_algorithm(num_generations)
 #    search.run_greedy_search(num_generations)
-    search.run_exhaustive_search()
+#    search.run_exhaustive_search()
     
     # The housing assigment for the genome with the largest P
     for index, (g, N_val, P_val) in enumerate(search.genomes_and_scores_list):
