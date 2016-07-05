@@ -41,10 +41,10 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
     last_name_index = column_names.index("Name (Last)")
     email_index = column_names.index("Email")
     is_host_index = column_names.index("Local Housing")
-    events_registered_index = column_names.index("For Which Event(s) Would You Like to Register?")
-    events_doing_housing_index = column_names.index("For Which Event(s) Can You Provide Housing?")
-    events_needing_housing_index = column_names.index("For Which Event(s) Would You Like Local Housing?")
-    rlx_additional_comments_index = column_names.index("RLX - Additional Comments (Optional)")
+#    events_registered_index = column_names.index("For Which Event(s) Would You Like to Register?")
+#    events_doing_housing_index = column_names.index("For Which Event(s) Can You Provide Housing?")
+#    events_needing_housing_index = column_names.index("For Which Event(s) Would You Like Local Housing?")
+#    rlx_additional_comments_index = column_names.index("RLX - Additional Comments (Optional)")
     late_night_tendencies_index = column_names.index("What is Your Dancing Preference?")
     gender_index = column_names.index("Gender")
     hosts_prefer_which_gender_index = column_names.index("Which Gender Would You Prefer to House?")
@@ -76,17 +76,17 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
             first_name = line_data[first_name_index].strip()
             last_name = line_data[last_name_index].strip()
             email = line_data[email_index]
-            events_registered = [] # Currently, our data has no one who is registed for the Process, but not RLX
-            if "Both RLX and The Process (save $10!)" in line_data[events_registered_index]:
-                events_registered += ["The Process", "RLX"]
-            if "RLX 2016" in line_data[events_registered_index]:
-                events_registered += ["RLX"]
-            events_doing_housing = [] # Currently, our data has no one who is housing people for the Process, but not RLX
-            if "Both RLX and The Process!" in line_data[events_doing_housing_index]:
-                events_doing_housing += ["The Process", "RLX"]
-            if "RLX 2016" in line_data[events_doing_housing_index]:
-                events_doing_housing += ["RLX"]
-            rlx_additional_comments = line_data[rlx_additional_comments_index]
+#            events_registered = [] # Currently, our data has no one who is registed for the Process, but not RLX
+#            if "Both RLX and The Process (save $10!)" in line_data[events_registered_index]:
+#                events_registered += ["The Process", "RLX"]
+#            if "RLX 2016" in line_data[events_registered_index]:
+#                events_registered += ["RLX"]
+#            events_doing_housing = [] # Currently, our data has no one who is housing people for the Process, but not RLX
+#            if "Both RLX and The Process!" in line_data[events_doing_housing_index]:
+#                events_doing_housing += ["The Process", "RLX"]
+#            if "RLX 2016" in line_data[events_doing_housing_index]:
+#                events_doing_housing += ["RLX"]
+#            rlx_additional_comments = line_data[rlx_additional_comments_index]
             late_night_tendencies = "early sleeper"
             if 'some late night' in line_data[late_night_tendencies_index]:
                 late_night_tendencies = "some late night"
@@ -114,9 +114,9 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                     "first_name": first_name, 
                     "last_name": last_name, 
                     "email": email, 
-                    "events_registered": events_registered, 
-                    "events_doing_housing": events_doing_housing, 
-                    "rlx_additional_comments": rlx_additional_comments, 
+#                    "events_registered": events_registered, 
+#                    "events_doing_housing": events_doing_housing, 
+#                    "rlx_additional_comments": rlx_additional_comments, 
                     "late_night_tendencies": late_night_tendencies, 
                     "gender": gender, 
                     "hosts_prefer_which_gender": hosts_prefer_which_gender, 
@@ -143,9 +143,9 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                 print "%-30s %50s" % ("willing_to_provide_rides", str(willing_to_provide_rides))
                 print "%-30s %50s" % ("late_night_tendencies", str(late_night_tendencies))
                 print "%-30s %50s" % ("num_spots_available", str(num_spots_available))
-                print "%-30s %50s" % ("events_registered", str(events_registered))
-                print "%-30s %50s" % ("events_doing_housing", str(events_doing_housing))
-                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
+#                print "%-30s %50s" % ("events_registered", str(events_registered))
+#                print "%-30s %50s" % ("events_doing_housing", str(events_doing_housing))
+#                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
                 print "%-30s %50s" % ("gender", str(gender))
                 print "%-30s %50s" % ("hosts_prefer_which_gender", str(hosts_prefer_which_gender))
                 print "%-30s %50s" % ("phone_number", str(phone_number))
@@ -164,17 +164,17 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
             first_name = line_data[first_name_index].strip()
             last_name = line_data[last_name_index].strip()
             email = line_data[email_index]
-            events_registered = [] # Currently, our data has no one who is registed for the Process, but not RLX
-            if "Both RLX and The Process (save $10!)" in line_data[events_registered_index]:
-                events_registered += ["The Process", "RLX"]
-            if "RLX 2016" in line_data[events_registered_index]:
-                events_registered += ["RLX"]
-            events_needing_housing = [] # Currently, our data has no one who is housing people for the Process, but not RLX
-            if "Both RLX and The Process!" in line_data[events_needing_housing_index]:
-                events_needing_housing += ["The Process", "RLX"]
-            if "RLX 2016" in line_data[events_needing_housing_index]:
-                events_needing_housing += ["RLX"]
-            rlx_additional_comments = line_data[rlx_additional_comments_index]
+#            events_registered = [] # Currently, our data has no one who is registed for the Process, but not RLX
+#            if "Both RLX and The Process (save $10!)" in line_data[events_registered_index]:
+#                events_registered += ["The Process", "RLX"]
+#            if "RLX 2016" in line_data[events_registered_index]:
+#                events_registered += ["RLX"]
+#            events_needing_housing = [] # Currently, our data has no one who is housing people for the Process, but not RLX
+#            if "Both RLX and The Process!" in line_data[events_needing_housing_index]:
+#                events_needing_housing += ["The Process", "RLX"]
+#            if "RLX 2016" in line_data[events_needing_housing_index]:
+#                events_needing_housing += ["RLX"]
+#            rlx_additional_comments = line_data[rlx_additional_comments_index]
             late_night_tendencies = "early sleeper"
             if 'some late night' in line_data[late_night_tendencies_index]:
                 late_night_tendencies = "some late night"
@@ -200,9 +200,9 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                     "first_name": first_name, 
                     "last_name": last_name, 
                     "email": email, 
-                    "events_registered": events_registered, 
-                    "events_needing_housing": events_needing_housing, 
-                    "rlx_additional_comments": rlx_additional_comments, 
+#                    "events_registered": events_registered, 
+#                    "events_needing_housing": events_needing_housing, 
+#                    "rlx_additional_comments": rlx_additional_comments, 
                     "late_night_tendencies": late_night_tendencies, 
                     "gender": gender, 
                     "guests_prefer_which_gender": guests_prefer_which_gender, 
@@ -221,9 +221,9 @@ def get_hosts_and_guests(input_xlsx='housing_data.xlsx', index_of_sheet_containi
                 print "%-30s %50s" % ("first_name", str(first_name))
                 print "%-30s %50s" % ("last_name", str(last_name))
                 print "%-30s %50s" % ("email", str(email))
-                print "%-30s %50s" % ("events_registered", str(events_registered))
-                print "%-30s %50s" % ("events_needing_housing", str(events_needing_housing))
-                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
+#                print "%-30s %50s" % ("events_registered", str(events_registered))
+#                print "%-30s %50s" % ("events_needing_housing", str(events_needing_housing))
+#                print "%-30s %50s" % ("rlx_additional_comments", str(rlx_additional_comments))
                 print "%-30s %50s" % ("late_night_tendencies", str(late_night_tendencies))
                 print "%-30s %50s" % ("gender", str(gender))
                 print "%-30s %50s" % ("guests_prefer_which_gender", str(guests_prefer_which_gender))

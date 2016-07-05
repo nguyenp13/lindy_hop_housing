@@ -280,12 +280,12 @@ def are_compatible(host,guest):
     def local_debug_print(text):
         if local_debug:
             print text
-    if not main.EVENT_WE_ARE_HOUSING_FOR in host["events_doing_housing"]:
-        local_debug_print('EVENT1')
-        return False
-    if not main.EVENT_WE_ARE_HOUSING_FOR in guest["events_needing_housing"]:
-        local_debug_print('EVENT2')
-        return False
+#    if not main.EVENT_WE_ARE_HOUSING_FOR in host["events_doing_housing"]:
+#        local_debug_print('EVENT1')
+#        return False
+#    if not main.EVENT_WE_ARE_HOUSING_FOR in guest["events_needing_housing"]:
+#        local_debug_print('EVENT2')
+#        return False
     if not guest["days_housing_is_needed"].issubset(host["days_housing_is_available"]):
         local_debug_print('DAYS')
         return False
